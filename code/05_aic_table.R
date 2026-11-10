@@ -55,15 +55,16 @@ for(i in 1:length(species)) {
           errors[1,j] <- paste0(fit)
         }
         if(class(fit)!="try-error"){
-          s <- try(sanity(fit, silent=TRUE))
+          s <- try(sanity(get_fit(fit), silent=TRUE))
           if(class(s)!="try-error"){
             if((s$hessian_ok + s$eigen_values_ok +s$nlminb_ok)==3){
               temp[1,j] <- AIC(fit)
               if(this_model %in% mi_models){
-                pars <- as.data.frame(tidy(fit, effects="fixed", conf.int=T))
-                thresh <- filter(pars,grepl("breakpt", term))
+                pars <- as.data.frame(tidy(get_fit(fit), effects="fixed", conf.int=T))
+                #Cutpoint is fixed at its profile estimate, so it has no SE; check the slope
+                thresh <- filter(pars,grepl("slope", term))
                 sd_thresh <- thresh$std.error
-                if(sd_thresh=="NaN"){
+                if(!is.finite(sd_thresh)){
                   temp[1,j] <- NA
                 }
               }

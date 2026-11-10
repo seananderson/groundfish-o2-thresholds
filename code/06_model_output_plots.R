@@ -1,5 +1,6 @@
-remove.packages("sdmTMB")
-remotes::install_github("pbs-assess/sdmTMB", dependencies = TRUE,  ref="newbreakpt")
+# remove.packages("sdmTMB")
+# Needs sdmTMB main with profile_breakpt():
+# remotes::install_github("pbs-assess/sdmTMB", dependencies = TRUE)
 library(sdmTMB)
 library(sp)
 library(dplyr)
@@ -196,17 +197,10 @@ for(i in 1:length(species)){
         for(g in 1:length(model_fits)){
           if(models[g] %in% mi_models2use){
             fit <- model_fits[[g]]
-            # Get variance-covariance matrix
-            V <- fit[["sd_report"]][["cov.fixed"]]
-            #Pull out just threshold
-            vcov <- V[grep("threshold", rownames(V)), grep("threshold", colnames(V))]
-            slope <- fit[["sd_report"]][["value"]][["s_slope"]]
-            thresh <- fit[["sd_report"]][["value"]][["s_cut"]]
-          
-            #Pull 100 par combinations from variance-covariance matrix
-            bp_pars <- MASS::mvrnorm(n=100, mu=c(log(slope),thresh), Sigma=vcov)
-            slope_pars <- exp(bp_pars[,1])
-            thresh_pars <- bp_pars[,2]
+            #Draw slope and cutpoint across fixed-cut refits (see breakpt_mix())
+            bp_pars <- breakpt_draws(fit, n=100)
+            slope_pars <- bp_pars[,"slope"]
+            thresh_pars <- bp_pars[,"cut"]
             
             #Calculate the breakpoint effect
             if(models[g]=="model13"){
@@ -373,17 +367,10 @@ for(i in 1:length(species_o2)){
       for(g in 1:length(model_fits)){
        # if(models[g] %in% mi_models2use){
           fit <- model_fits[[g]]
-          pars <- as.data.frame(tidy(fit, effects="fixed", conf.int=T))
-          # Get variance-covariance matrix
-          V <- fit[["sd_report"]][["cov.fixed"]]
-          #Pull out just threshold
-          vcov <- V[grep("threshold", rownames(V)), grep("threshold", colnames(V))]
-          slope <- fit[["sd_report"]][["value"]][["s_slope"]]
-          thresh <- fit[["sd_report"]][["value"]][["s_cut"]]
-          #Pull 100 par combinations from variance-covariance matrix
-          bp_pars <- MASS::mvrnorm(n=100, mu=c(log(slope),thresh), Sigma=vcov)
-          slope_est <- exp(bp_pars[,1])
-          bp_par <- bp_pars[,2]
+          #Draw slope and cutpoint across fixed-cut refits (see breakpt_mix())
+          bp_pars <- breakpt_draws(fit, n=100)
+          slope_est <- bp_pars[,"slope"]
+          bp_par <- bp_pars[,"cut"]
           pars <- data.frame(bp_par=bp_par, slope_est=slope_est)
 
           if(models[g]=="model13"){
@@ -719,17 +706,10 @@ for(i in 1:nrow(bp_est2)){
  for(g in 1:length(model_fits)){
         if(models[g] %in% mi_models2use){
           fit <- model_fits[[g]]
-          # Get variance-covariance matrix
-          V <- fit[["sd_report"]][["cov.fixed"]]
-          #Pull out just threshold
-          vcov <- V[grep("threshold", rownames(V)), grep("threshold", colnames(V))]
-          slope <- fit[["sd_report"]][["value"]][["s_slope"]]
-          thresh <- fit[["sd_report"]][["value"]][["s_cut"]]
-          
-          #Pull 100 par combinations from variance-covariance matrix
-          bp_pars <- MASS::mvrnorm(n=100, mu=c(log(slope),thresh), Sigma=vcov)
-          slope_pars <- exp(bp_pars[,1])
-          thresh_pars <- bp_pars[,2]
+          #Draw slope and cutpoint across fixed-cut refits (see breakpt_mix())
+          bp_pars <- breakpt_draws(fit, n=100)
+          slope_pars <- bp_pars[,"slope"]
+          thresh_pars <- bp_pars[,"cut"]
           
           #Calculate the breakpoint effect
           if(models[g]=="model13"){
@@ -1143,17 +1123,10 @@ process_species <- function(species2do){
     if(models[g] %in% mi_models2use){
       fit <- model_fits[[g]]
       print(g)
-      # Get variance-covariance matrix
-      V <- fit[["sd_report"]][["cov.fixed"]]
-      #Pull out just threshold
-      vcov <- V[grep("threshold", rownames(V)), grep("threshold", colnames(V))]
-      vcov <- as.matrix(nearPD(vcov)$mat)
-      slope <- fit[["sd_report"]][["value"]][["s_slope"]]
-      thresh <- fit[["sd_report"]][["value"]][["s_cut"]]
-      #Pull 100 par combinations from variance-covariance matrix
-      bp_pars <- MASS::mvrnorm(n=100, mu=c(log(slope),thresh), Sigma=vcov)
-      slope_pars <- exp(bp_pars[,1])
-      thresh_pars <- bp_pars[,2]
+      #Draw slope and cutpoint across fixed-cut refits (see breakpt_mix())
+      bp_pars <- breakpt_draws(fit, n=100)
+      slope_pars <- bp_pars[,"slope"]
+      thresh_pars <- bp_pars[,"cut"]
       par <- list(thresh_pars=thresh_pars, slope_pars=slope_pars)
       pars_list[[g]] <- par
     } else {
@@ -1629,7 +1602,7 @@ for(i in 1:length(species_list)){
     #Calculate the breakpoint effect
     #Prediction
     print(models[[g]])
-    prediction <- predict(fit, newdata=preds, se.fit=FALSE)
+    prediction <- predict(get_fit(fit), newdata=preds, se.fit=FALSE)
     prediction$weight <- weights[g]
     if(g==1){
       df <- prediction
@@ -1666,7 +1639,7 @@ for(i in 1:length(species_list)){
   for(g in 1:length(model_fits)){
     #Calculate the breakpoint effect
     #Prediction
-    prediction <- predict(fit, newdata=preds, se.fit=FALSE)
+    prediction <- predict(get_fit(fit), newdata=preds, se.fit=FALSE)
     prediction$weight <- weights[g]
     if(g==1){
       df <- prediction

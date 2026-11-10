@@ -2179,3 +2179,76 @@ update_df <- function(species_df, taxa.name, w, pcrit_type = "smr", rep, ParentC
   return(species_df)
 }
 
+
+## Profile-likelihood breakpoint helpers (sdmTMB::profile_breakpt()) ----
+
+#sdmTMB fit from either sdmTMB() or profile_breakpt() output
+get_fit <- function(x) {
+  if (inherits(x, "breakpt_profile")) x$fit else x
+}
+
+#Refit at evenly spaced fixed cutpoints where the profile is within `within`
+#NLL units of its minimum, weighting each fit by its likelihood. See the
+#threshold-models article in sdmTMB ("To include uncertainty in the
+#breakpoint..."). Each end is extended to where a straight line to the next
+#profile fit out crosses `within`. Returns one row per refit with the cut, NLL,
+#weight, and slope estimate and SE (cutpoint fixed). `envir` is where the
+#original call's variables (formula, priors, etc.) live.
+breakpt_mix <- function(pr, within = 4, n_cuts = 10, envir = parent.frame()) {
+  prof <- pr$profile[!is.na(pr$profile$nll), ]
+  prof <- prof[order(prof$cut), ]
+  inside <- which(prof$dnll < within)
+  lo <- min(inside)
+  hi <- max(inside)
+  cross <- function(i, j) {
+    prof$cut[i] + (within - prof$dnll[i]) *
+      (prof$cut[j] - prof$cut[i]) / (prof$dnll[j] - prof$dnll[i])
+  }
+  lwr <- if (lo > 1) cross(lo, lo - 1) else prof$cut[lo]
+  upr <- if (hi < nrow(prof)) cross(hi, hi + 1) else prof$cut[hi]
+  cuts <- seq(lwr, upr, length.out = n_cuts)
+
+  fit <- pr$fit
+  ctrl <- fit$control
+  ctrl$start <- fit$tmb_obj$env$parList() # start from the best fit
+  ctrl$map <- list(b_threshold = factor(c(1, NA))) # estimate slope, fix cut
+  ctrl$multiphase <- FALSE
+  ctrl$nlminb_loops <- 1L
+  ctrl$newton_loops <- 1L
+  call <- fit$call
+  call$mesh <- fit$spde
+  call$data <- fit$data
+
+  out <- lapply(cuts, function(cut) {
+    ctrl$start$b_threshold[2] <- cut
+    call$control <- ctrl
+    f <- try(suppressMessages(eval(call, envir)), silent = TRUE)
+    if (inherits(f, "try-error") || is.null(f$sd_report)) {
+      return(data.frame(cut = cut, nll = NA, slope = NA, slope_se = NA))
+    }
+    sdr <- f$sd_report
+    i <- names(sdr$par.fixed) == "b_threshold"
+    data.frame(
+      cut = cut, nll = f$model$objective,
+      slope = unname(sdr$par.fixed[i]),
+      slope_se = unname(sqrt(diag(sdr$cov.fixed))[i])
+    )
+  })
+  out <- do.call(rbind, out)
+  ok <- is.finite(out$nll) & is.finite(out$slope_se)
+  out$weight <- 0
+  out$weight[ok] <- exp(min(out$nll[ok]) - out$nll[ok])
+  out$weight <- out$weight / sum(out$weight)
+  out
+}
+
+#n draws of the slope and cutpoint from profile_breakpt() output with $mix
+#from breakpt_mix(). Draws are split among the fixed-cut refits by weight;
+#within a refit, the slope is drawn from its estimate and SE.
+#Returns a matrix with columns slope and cut (scaled covariate units).
+breakpt_draws <- function(pr, n = 100) {
+  mix <- pr$mix
+  if (!is.data.frame(mix)) stop("No breakpt_mix() results in `pr$mix`.")
+  k <- sample(nrow(mix), n, replace = TRUE, prob = mix$weight)
+  cbind(slope = rnorm(n, mix$slope[k], mix$slope_se[k]), cut = mix$cut[k])
+}

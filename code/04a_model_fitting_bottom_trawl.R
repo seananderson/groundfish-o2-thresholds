@@ -1,5 +1,6 @@
-remove.packages("sdmTMB")
-remotes::install_github("pbs-assess/sdmTMB", dependencies = TRUE,  ref="newbreakpt")
+# remove.packages("sdmTMB")
+# Needs sdmTMB main with profile_breakpt():
+# remotes::install_github("pbs-assess/sdmTMB", dependencies = TRUE)
 library(sdmTMB)
 library(sp)
 library(dplyr)
@@ -77,10 +78,13 @@ filter_depth <- T
 output_folder <- "output"
 
 #Fit models 1-6? (Quadratic depth, not cubic depth)
-quad_depth_m1_6 <- T
+quad_depth_m1_6 <- F # not used downstream (05/06 use models 7, 8, 13-15)
 
 #Fit models 
 cub_depth_m7_16 <- T
+
+#Fit models 9-12 and 16? Not used downstream
+fit_unused <- F
 
 #depth & latitude info from species table
 species_table <- read_excel("data/species_table.xlsx")
@@ -228,8 +232,7 @@ for (h in 1:length(species)){
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(normalize = TRUE,
-                              multiphase = TRUE, 
+      control = sdmTMBcontrol(multiphase = FALSE, 
                               newton_loops = 3,
                               nlminb_loops = 2)
       # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
@@ -262,8 +265,7 @@ for (h in 1:length(species)){
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(normalize = TRUE,
-                              multiphase = TRUE,
+      control = sdmTMBcontrol(multiphase = FALSE,
                               newton_loops = 3,
                               nlminb_loops = 2)
       # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
@@ -286,7 +288,7 @@ for (h in 1:length(species)){
       }
     }
     start = Sys.time()
-    m3 <-try(sdmTMB(
+    m3 <-try(profile_breakpt(
       formula = as.formula(formula),
       mesh = spde,
       time = "year",
@@ -296,8 +298,7 @@ for (h in 1:length(species)){
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(normalize = TRUE,
-                              multiphase = TRUE,
+      control = sdmTMBcontrol(multiphase = FALSE,
                               newton_loops = 3,
                               nlminb_loops = 2)
       #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
@@ -320,7 +321,7 @@ for (h in 1:length(species)){
         formula =  "catch ~ -1 + region +year+breakpt(mi2_s)+ log_depth_scaled+ log_depth_scaled2"
       }
     }
-    m4 <-try(sdmTMB(
+    m4 <-try(profile_breakpt(
       formula = as.formula(formula),
       mesh = spde,
       time = "year",
@@ -330,8 +331,7 @@ for (h in 1:length(species)){
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(normalize = TRUE,
-                              multiphase = TRUE,
+      control = sdmTMBcontrol(multiphase = FALSE,
                               newton_loops = 3,
                               nlminb_loops = 2)
       # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
@@ -354,7 +354,7 @@ for (h in 1:length(species)){
         formula =  "catch ~ -1 + region +year+breakpt(mi3_s)+ log_depth_scaled+ log_depth_scaled2"
       }
     }
-    m5 <- try(sdmTMB(
+    m5 <- try(profile_breakpt(
       formula = as.formula(formula),
       mesh = spde,
       time = "year",
@@ -364,8 +364,7 @@ for (h in 1:length(species)){
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(normalize = TRUE,
-                              multiphase = TRUE,
+      control = sdmTMBcontrol(multiphase = FALSE,
                               newton_loops = 3,
                               nlminb_loops = 2)
       #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
@@ -388,7 +387,7 @@ for (h in 1:length(species)){
         formula =  "catch ~ -1 + region +year+breakpt(po2_s)+ log_depth_scaled+ log_depth_scaled2"
       }
     }
-    m6 <- try(sdmTMB(
+    m6 <- try(profile_breakpt(
       formula = as.formula(formula),
       mesh = spde,
       time = "year",
@@ -398,8 +397,7 @@ for (h in 1:length(species)){
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(normalize = TRUE,
-                              multiphase = TRUE,
+      control = sdmTMBcontrol(multiphase = FALSE,
                               newton_loops = 3,
                               nlminb_loops = 2)
       #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
@@ -433,8 +431,7 @@ for (h in 1:length(species)){
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(normalize = TRUE,
-                              multiphase = TRUE, 
+      control = sdmTMBcontrol(multiphase = FALSE, 
                               newton_loops = 3,
                               nlminb_loops = 2)
      # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
@@ -467,8 +464,7 @@ for (h in 1:length(species)){
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(normalize = TRUE,
-                              multiphase = TRUE,
+      control = sdmTMBcontrol(multiphase = FALSE,
                               newton_loops = 3,
                               nlminb_loops = 2)
      # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
@@ -476,6 +472,7 @@ for (h in 1:length(species)){
     print( Sys.time() - start )
     saveRDS(m8, file = paste0("output/",output_folder, "/", this_species,  "_", dat_names[i],"_model8.rds"))
     
+    if(fit_unused){ # models 9-12
     # Model 9: breakpoint MI low
     print("fitting m9")
     if(dat_names[i]!="coastwide"){
@@ -491,7 +488,7 @@ for (h in 1:length(species)){
       }
     }
     start = Sys.time()
-    m9 <-try(sdmTMB(
+    m9 <-try(profile_breakpt(
       formula = as.formula(formula),
       mesh = spde,
       time = "year",
@@ -501,8 +498,7 @@ for (h in 1:length(species)){
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(normalize = TRUE,
-                              multiphase = TRUE,
+      control = sdmTMBcontrol(multiphase = FALSE,
                               newton_loops = 2)
       #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
@@ -524,7 +520,7 @@ for (h in 1:length(species)){
         formula =  "catch ~ -1 + year+ region +breakpt(mi2_s)+ log_depth_scaled+ log_depth_scaled2+log_depth_scaled3"
       }
     }
-    m10 <-try(sdmTMB(
+    m10 <-try(profile_breakpt(
       formula = as.formula(formula),
       mesh = spde,
       time = "year",
@@ -534,8 +530,7 @@ for (h in 1:length(species)){
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(normalize = TRUE,
-                              multiphase = TRUE,
+      control = sdmTMBcontrol(multiphase = FALSE,
                               newton_loops = 2)
      # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
@@ -557,7 +552,7 @@ for (h in 1:length(species)){
         formula =  "catch ~ -1 + year+region+breakpt(mi3_s)+ log_depth_scaled+ log_depth_scaled2+log_depth_scaled3"
       }
     }
-    m11 <- try(sdmTMB(
+    m11 <- try(profile_breakpt(
       formula = as.formula(formula),
       mesh = spde,
       time = "year",
@@ -567,8 +562,7 @@ for (h in 1:length(species)){
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(normalize = TRUE,
-                              multiphase = TRUE,
+      control = sdmTMBcontrol(multiphase = FALSE,
                               newton_loops = 3,
                               nlminb_loops = 2)
       #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
@@ -590,7 +584,7 @@ for (h in 1:length(species)){
         formula =  "catch ~ -1 + year+ region +breakpt(po2_s)+ log_depth_scaled+ log_depth_scaled2+log_depth_scaled3"
       }
     }
-    m12 <- try(sdmTMB(
+    m12 <- try(profile_breakpt(
       formula = as.formula(formula),
       mesh = spde,
       time = "year",
@@ -600,14 +594,14 @@ for (h in 1:length(species)){
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(normalize = TRUE,
-                              multiphase = TRUE,
+      control = sdmTMBcontrol(multiphase = FALSE,
                               newton_loops = 3,
                               nlminb_loops = 2)
      # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
     print( Sys.time() - start )
     saveRDS(m12, file = paste0("output/",output_folder, "/", this_species, "_", dat_names[i], "_model12.rds"))
+    }
   # Model 13: breakpoint MI low+quad temp
   print("fitting m13")
   if(dat_names[i]!="coastwide"){
@@ -623,7 +617,7 @@ for (h in 1:length(species)){
     }
   }
   start = Sys.time()
-  m13 <-try(sdmTMB(
+  m13 <-try(profile_breakpt(
     formula = as.formula(formula),
     mesh = spde,
     time = "year",
@@ -633,13 +627,14 @@ for (h in 1:length(species)){
     share_range = TRUE,
     spatial = "on",
     spatiotemporal = paste(st_type),
-    control = sdmTMBcontrol(normalize = TRUE,
-                            multiphase = TRUE,
+    control = sdmTMBcontrol(multiphase = FALSE,
                             newton_loops = 3,
                             nlminb_loops = 2)
     #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
   ))
   print( Sys.time() - start )
+  #Refits at fixed cutpoints for breakpoint uncertainty (used in 06)
+  if(!inherits(m13, "try-error")) m13$mix <- try(breakpt_mix(m13))
   saveRDS(m13, file = paste0("output/",output_folder, "/", this_species, "_", dat_names[i], "_model13.rds"))
   
   # Model 14: Breakpoint(mi median)
@@ -657,7 +652,7 @@ for (h in 1:length(species)){
       formula =  "catch ~ -1 + year + region +breakpt(mi2_s)+temp_scaled + temp_scaled2+ log_depth_scaled+ log_depth_scaled2+log_depth_scaled3"
     }
   }
-  m14 <-try(sdmTMB(
+  m14 <-try(profile_breakpt(
     formula = as.formula(formula),
     mesh = spde,
     time = "year",
@@ -667,13 +662,14 @@ for (h in 1:length(species)){
     share_range = TRUE,
     spatial = "on",
     spatiotemporal = paste(st_type),
-    control = sdmTMBcontrol(normalize = TRUE,
-                            multiphase = TRUE,
+    control = sdmTMBcontrol(multiphase = FALSE,
                             newton_loops = 3,
                             nlminb_loops = 2)
     # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
   ))
   print( Sys.time() - start )
+  #Refits at fixed cutpoints for breakpoint uncertainty (used in 06)
+  if(!inherits(m14, "try-error")) m14$mix <- try(breakpt_mix(m14))
   saveRDS(m14, file = paste0("output/",output_folder, "/", this_species, "_", dat_names[i], "_model14.rds"))
   
   # Model 15: breakpoint(mi high)
@@ -691,7 +687,7 @@ for (h in 1:length(species)){
       formula =  "catch ~ -1 + year+ region +breakpt(mi3_s)+temp_scaled + temp_scaled2+ log_depth_scaled+ log_depth_scaled2+log_depth_scaled3"
     }
   }
-  m15 <- try(sdmTMB(
+  m15 <- try(profile_breakpt(
     formula = as.formula(formula),
     mesh = spde,
     time = "year",
@@ -701,14 +697,16 @@ for (h in 1:length(species)){
     share_range = TRUE,
     spatial = "on",
     spatiotemporal = paste(st_type),
-    control = sdmTMBcontrol(normalize = TRUE,
-                            multiphase = TRUE,
+    control = sdmTMBcontrol(multiphase = FALSE,
                             newton_loops = 3,
                             nlminb_loops = 2)
     #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
   ))
   print( Sys.time() - start )
+  #Refits at fixed cutpoints for breakpoint uncertainty (used in 06)
+  if(!inherits(m15, "try-error")) m15$mix <- try(breakpt_mix(m15))
   saveRDS(m15, file = paste0("output/",output_folder, "/", this_species, "_", dat_names[i], "_model15.rds"))
+  if(fit_unused){ # model 16
   # Model 16: breakpoint(o2)
   print("fitting m16")
   start = Sys.time()
@@ -724,7 +722,7 @@ for (h in 1:length(species)){
       formula =  "catch ~ -1 + year+ region +breakpt(po2_s)+temp_scaled + temp_scaled2+ log_depth_scaled+ log_depth_scaled2+log_depth_scaled3"
     }
   }
-  m16 <- try(sdmTMB(
+  m16 <- try(profile_breakpt(
     formula = as.formula(formula),
     mesh = spde,
     time = "year",
@@ -734,14 +732,14 @@ for (h in 1:length(species)){
     share_range = TRUE,
     spatial = "on",
     spatiotemporal = paste(st_type),
-    control = sdmTMBcontrol(normalize = TRUE,
-                            multiphase = TRUE,
+    control = sdmTMBcontrol(multiphase = FALSE,
                             newton_loops = 3,
                             nlminb_loops = 2)
     # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
   ))
   print( Sys.time() - start )
   saveRDS(m16, file = paste0("output/",output_folder, "/", this_species, "_", dat_names[i], "_model16.rds"))
+  }
   gc()
     }
 }
