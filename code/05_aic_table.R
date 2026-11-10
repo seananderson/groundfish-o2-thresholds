@@ -57,7 +57,7 @@ for(i in 1:length(species)) {
         if(class(fit)!="try-error"){
           s <- try(sanity(get_fit(fit), silent=TRUE))
           if(class(s)!="try-error"){
-            if((s$hessian_ok + s$eigen_values_ok +s$nlminb_ok)==3){
+            if((s$hessian_ok + s$eigen_values_ok + s$nlminb_ok + s$gradients_ok)==4){
               temp[1,j] <- AIC(fit)
               if(this_model %in% mi_models){
                 pars <- as.data.frame(tidy(get_fit(fit), effects="fixed", conf.int=T))
@@ -69,9 +69,9 @@ for(i in 1:length(species)) {
                 }
               }
             }
-            if((s$hessian_ok + s$eigen_values_ok +s$nlminb_ok)< 3) {
+            if((s$hessian_ok + s$eigen_values_ok + s$nlminb_ok + s$gradients_ok)< 4) {
             temp[1,j] <- NA
-            errors[1,j] <- paste0(s$hessian_ok, ", ", s$eigen_values_ok, ", ", s$nlminb_ok)
+            errors[1,j] <- paste0(s$hessian_ok, ", ", s$eigen_values_ok, ", ", s$nlminb_ok, ", ", s$gradients_ok)
           } 
           }
         }

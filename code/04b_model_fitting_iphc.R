@@ -249,9 +249,7 @@ for (h in 1:length(species)) {
         share_range = TRUE,
         spatial = "on",
         spatiotemporal = paste(st_type),
-        control = sdmTMBcontrol(multiphase = FALSE, 
-                                newton_loops = 3,
-                                nlminb_loops = 2)
+        control = sdmTMBcontrol(multiphase = FALSE)
         # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
       ))
       print( Sys.time() - start )
@@ -282,9 +280,7 @@ for (h in 1:length(species)) {
         share_range = TRUE,
         spatial = "on",
         spatiotemporal = paste(st_type),
-        control = sdmTMBcontrol(multiphase = FALSE,
-                                newton_loops = 3,
-                                nlminb_loops = 2)
+        control = sdmTMBcontrol(multiphase = FALSE)
         # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
       ))
       print( Sys.time() - start )
@@ -315,9 +311,7 @@ for (h in 1:length(species)) {
         share_range = TRUE,
         spatial = "on",
         spatiotemporal = paste(st_type),
-        control = sdmTMBcontrol(multiphase = FALSE,
-                                newton_loops = 3,
-                                nlminb_loops = 2)
+        control = sdmTMBcontrol(multiphase = FALSE)
         #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
       ))
       print( Sys.time() - start )
@@ -348,9 +342,7 @@ for (h in 1:length(species)) {
         share_range = TRUE,
         spatial = "on",
         spatiotemporal = paste(st_type),
-        control = sdmTMBcontrol(multiphase = FALSE,
-                                newton_loops = 3,
-                                nlminb_loops = 2)
+        control = sdmTMBcontrol(multiphase = FALSE)
         # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
       ))
       print( Sys.time() - start )
@@ -381,9 +373,7 @@ for (h in 1:length(species)) {
         share_range = TRUE,
         spatial = "on",
         spatiotemporal = paste(st_type),
-        control = sdmTMBcontrol(multiphase = FALSE,
-                                newton_loops = 3,
-                                nlminb_loops = 2)
+        control = sdmTMBcontrol(multiphase = FALSE)
         #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
       ))
       print( Sys.time() - start )
@@ -414,9 +404,7 @@ for (h in 1:length(species)) {
         share_range = TRUE,
         spatial = "on",
         spatiotemporal = paste(st_type),
-        control = sdmTMBcontrol(multiphase = FALSE,
-                                newton_loops = 3,
-                                nlminb_loops = 2)
+        control = sdmTMBcontrol(multiphase = FALSE)
         #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
       ))
       print( Sys.time() - start )
@@ -450,9 +438,7 @@ for (h in 1:length(species)) {
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(multiphase = FALSE, 
-                              newton_loops = 3,
-                              nlminb_loops = 2)
+      control = sdmTMBcontrol(multiphase = FALSE)
       # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
     print( Sys.time() - start )
@@ -483,9 +469,7 @@ for (h in 1:length(species)) {
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(multiphase = FALSE,
-                              newton_loops = 3,
-                              nlminb_loops = 2)
+      control = sdmTMBcontrol(multiphase = FALSE)
       # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
     print( Sys.time() - start )
@@ -517,9 +501,7 @@ for (h in 1:length(species)) {
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(multiphase = FALSE,
-                              newton_loops = 3,
-                              nlminb_loops = 2)
+      control = sdmTMBcontrol(multiphase = FALSE)
       #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
     print( Sys.time() - start )
@@ -550,9 +532,7 @@ for (h in 1:length(species)) {
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(multiphase = FALSE,
-                              newton_loops = 3,
-                              nlminb_loops = 2)
+      control = sdmTMBcontrol(multiphase = FALSE)
       # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
     print( Sys.time() - start )
@@ -583,9 +563,7 @@ for (h in 1:length(species)) {
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(multiphase = FALSE,
-                              newton_loops = 3,
-                              nlminb_loops = 2)
+      control = sdmTMBcontrol(multiphase = FALSE)
       #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
     print( Sys.time() - start )
@@ -614,9 +592,7 @@ for (h in 1:length(species)) {
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(multiphase = FALSE,
-                              newton_loops = 3,
-                              nlminb_loops = 2)
+      control = sdmTMBcontrol(multiphase = FALSE)
       # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
     print( Sys.time() - start )
@@ -647,14 +623,12 @@ for (h in 1:length(species)) {
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(multiphase = FALSE,
-                              newton_loops = 3,
-                              nlminb_loops = 2)
+      control = sdmTMBcontrol(multiphase = FALSE)
       #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
     print( Sys.time() - start )
     #Refits at fixed cutpoints for breakpoint uncertainty (used in 06)
-    if(!inherits(m13, "try-error")) m13$mix <- try(breakpt_mix(m13))
+    if(!inherits(m13, "try-error")) m13$refits <- try(breakpt_refits(m13))
     saveRDS(m13, file = paste0("output/",output_folder, "/", this_species, "_", dat_names[i], "_model13.rds"))
     
     # Model 14: Breakpoint(mi median)
@@ -681,14 +655,12 @@ for (h in 1:length(species)) {
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(multiphase = FALSE,
-                              newton_loops = 3,
-                              nlminb_loops = 2)
+      control = sdmTMBcontrol(multiphase = FALSE)
       # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
     print( Sys.time() - start )
     #Refits at fixed cutpoints for breakpoint uncertainty (used in 06)
-    if(!inherits(m14, "try-error")) m14$mix <- try(breakpt_mix(m14))
+    if(!inherits(m14, "try-error")) m14$refits <- try(breakpt_refits(m14))
     saveRDS(m14, file = paste0("output/", output_folder, "/", this_species, "_", dat_names[i], "_model14.rds"))
     
     # Model 15: breakpoint(mi high)
@@ -716,14 +688,12 @@ for (h in 1:length(species)) {
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(multiphase = FALSE,
-                              newton_loops = 3,
-                              nlminb_loops = 2)
+      control = sdmTMBcontrol(multiphase = FALSE)
       #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
     print( Sys.time() - start )
     #Refits at fixed cutpoints for breakpoint uncertainty (used in 06)
-    if(!inherits(m15, "try-error")) m15$mix <- try(breakpt_mix(m15))
+    if(!inherits(m15, "try-error")) m15$refits <- try(breakpt_refits(m15))
     saveRDS(m15, file = paste0("output/", output_folder, "/", this_species, "_", dat_names[i], "_model15.rds"))
     if(fit_unused){ # model 16
     # Model 16: breakpoint(o2)
@@ -751,9 +721,7 @@ for (h in 1:length(species)) {
       share_range = TRUE,
       spatial = "on",
       spatiotemporal = paste(st_type),
-      control = sdmTMBcontrol(multiphase = FALSE,
-                              newton_loops = 3,
-                              nlminb_loops = 2)
+      control = sdmTMBcontrol(multiphase = FALSE)
       # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
     print( Sys.time() - start )

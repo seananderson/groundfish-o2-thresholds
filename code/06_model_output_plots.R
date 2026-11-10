@@ -197,7 +197,7 @@ for(i in 1:length(species)){
         for(g in 1:length(model_fits)){
           if(models[g] %in% mi_models2use){
             fit <- model_fits[[g]]
-            #Draw slope and cutpoint across fixed-cut refits (see breakpt_mix())
+            #Draw slope and cutpoint across fixed-cut refits (see breakpt_refits())
             bp_pars <- breakpt_draws(fit, n=100)
             slope_pars <- bp_pars[,"slope"]
             thresh_pars <- bp_pars[,"cut"]
@@ -367,7 +367,7 @@ for(i in 1:length(species_o2)){
       for(g in 1:length(model_fits)){
        # if(models[g] %in% mi_models2use){
           fit <- model_fits[[g]]
-          #Draw slope and cutpoint across fixed-cut refits (see breakpt_mix())
+          #Draw slope and cutpoint across fixed-cut refits (see breakpt_refits())
           bp_pars <- breakpt_draws(fit, n=100)
           slope_est <- bp_pars[,"slope"]
           bp_par <- bp_pars[,"cut"]
@@ -706,7 +706,7 @@ for(i in 1:nrow(bp_est2)){
  for(g in 1:length(model_fits)){
         if(models[g] %in% mi_models2use){
           fit <- model_fits[[g]]
-          #Draw slope and cutpoint across fixed-cut refits (see breakpt_mix())
+          #Draw slope and cutpoint across fixed-cut refits (see breakpt_refits())
           bp_pars <- breakpt_draws(fit, n=100)
           slope_pars <- bp_pars[,"slope"]
           thresh_pars <- bp_pars[,"cut"]
@@ -1123,7 +1123,7 @@ process_species <- function(species2do){
     if(models[g] %in% mi_models2use){
       fit <- model_fits[[g]]
       print(g)
-      #Draw slope and cutpoint across fixed-cut refits (see breakpt_mix())
+      #Draw slope and cutpoint across fixed-cut refits (see breakpt_refits())
       bp_pars <- breakpt_draws(fit, n=100)
       slope_pars <- bp_pars[,"slope"]
       thresh_pars <- bp_pars[,"cut"]

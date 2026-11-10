@@ -2194,7 +2194,7 @@ get_fit <- function(x) {
 #profile fit out crosses `within`. Returns one row per refit with the cut, NLL,
 #weight, and slope estimate and SE (cutpoint fixed). `envir` is where the
 #original call's variables (formula, priors, etc.) live.
-breakpt_mix <- function(pr, within = 4, n_cuts = 10, envir = parent.frame()) {
+breakpt_refits <- function(pr, within = 4, n_cuts = 10, envir = parent.frame()) {
   prof <- pr$profile[!is.na(pr$profile$nll), ]
   prof <- prof[order(prof$cut), ]
   inside <- which(prof$dnll < within)
@@ -2213,8 +2213,6 @@ breakpt_mix <- function(pr, within = 4, n_cuts = 10, envir = parent.frame()) {
   ctrl$start <- fit$tmb_obj$env$parList() # start from the best fit
   ctrl$map <- list(b_threshold = factor(c(1, NA))) # estimate slope, fix cut
   ctrl$multiphase <- FALSE
-  ctrl$nlminb_loops <- 1L
-  ctrl$newton_loops <- 1L
   call <- fit$call
   call$mesh <- fit$spde
   call$data <- fit$data
@@ -2242,13 +2240,13 @@ breakpt_mix <- function(pr, within = 4, n_cuts = 10, envir = parent.frame()) {
   out
 }
 
-#n draws of the slope and cutpoint from profile_breakpt() output with $mix
-#from breakpt_mix(). Draws are split among the fixed-cut refits by weight;
+#n draws of the slope and cutpoint from profile_breakpt() output with $refits
+#from breakpt_refits(). Draws are split among the fixed-cut refits by weight;
 #within a refit, the slope is drawn from its estimate and SE.
 #Returns a matrix with columns slope and cut (scaled covariate units).
 breakpt_draws <- function(pr, n = 100) {
-  mix <- pr$mix
-  if (!is.data.frame(mix)) stop("No breakpt_mix() results in `pr$mix`.")
-  k <- sample(nrow(mix), n, replace = TRUE, prob = mix$weight)
-  cbind(slope = rnorm(n, mix$slope[k], mix$slope_se[k]), cut = mix$cut[k])
+  refits <- pr$refits
+  if (!is.data.frame(refits)) stop("No breakpt_refits() results in `pr$refits`.")
+  k <- sample(nrow(refits), n, replace = TRUE, prob = refits$weight)
+  cbind(slope = rnorm(n, refits$slope[k], refits$slope_se[k]), cut = refits$cut[k])
 }
