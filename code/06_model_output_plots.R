@@ -1602,7 +1602,7 @@ for(i in 1:length(species_list)){
     #Calculate the breakpoint effect
     #Prediction
     print(models[[g]])
-    prediction <- predict(get_fit(fit), newdata=preds, se.fit=FALSE)
+    prediction <- predict(get_fit(model_fits[[g]]), newdata=preds, se.fit=FALSE)
     prediction$weight <- weights[g]
     if(g==1){
       df <- prediction
@@ -1639,7 +1639,7 @@ for(i in 1:length(species_list)){
   for(g in 1:length(model_fits)){
     #Calculate the breakpoint effect
     #Prediction
-    prediction <- predict(get_fit(fit), newdata=preds, se.fit=FALSE)
+    prediction <- predict(get_fit(model_fits[[g]]), newdata=preds, se.fit=FALSE)
     prediction$weight <- weights[g]
     if(g==1){
       df <- prediction
