@@ -2192,8 +2192,9 @@ get_fit <- function(x) {
 #threshold-models article in sdmTMB ("To include uncertainty in the
 #breakpoint..."). Each end is extended to where a straight line to the next
 #profile fit out crosses `within`. Returns one row per refit with the cut, NLL,
-#weight, and slope estimate and SE (cutpoint fixed). `envir` is where the
-#original call's variables (formula, priors, etc.) live.
+#weight, and the estimated slope parameter and its SE (cutpoint fixed). With
+#breakpt(positive = TRUE), that parameter is log(slope) (`log_scale` is TRUE).
+#`envir` is where the original call's variables (formula, priors, etc.) live.
 breakpt_refits <- function(pr, within = 4, n_cuts = 10, envir = parent.frame()) {
   prof <- pr$profile[!is.na(pr$profile$nll), ]
   prof <- prof[order(prof$cut), ]
@@ -2222,18 +2223,22 @@ breakpt_refits <- function(pr, within = 4, n_cuts = 10, envir = parent.frame()) 
     call$control <- ctrl
     f <- try(suppressMessages(eval(call, envir)), silent = TRUE)
     if (inherits(f, "try-error") || is.null(f$sd_report)) {
-      return(data.frame(cut = cut, nll = NA, slope = NA, slope_se = NA))
+      return(data.frame(cut = cut, nll = NA, par = NA, par_se = NA))
     }
     sdr <- f$sd_report
     i <- names(sdr$par.fixed) == "b_threshold"
     data.frame(
       cut = cut, nll = f$model$objective,
-      slope = unname(sdr$par.fixed[i]),
-      slope_se = unname(sqrt(diag(sdr$cov.fixed))[i])
+      par = unname(sdr$par.fixed[i]),
+      par_se = unname(sqrt(diag(sdr$cov.fixed))[i])
     )
   })
   out <- do.call(rbind, out)
-  ok <- is.finite(out$nll) & is.finite(out$slope_se)
+  out$log_scale <- identical(as.integer(fit$tmb_data$threshold_func), 3L)
+  out$slope <- if (out$log_scale[1]) exp(out$par) else out$par
+  ok <- is.finite(out$nll) & is.finite(out$par_se)
+  #e.g., a slope near 0 with breakpt(positive = TRUE), where log(slope) runs away
+  if (!any(ok)) stop("No fixed-cutpoint refit has a finite NLL and slope SE.")
   out$weight <- 0
   out$weight[ok] <- exp(min(out$nll[ok]) - out$nll[ok])
   out$weight <- out$weight / sum(out$weight)
@@ -2242,11 +2247,14 @@ breakpt_refits <- function(pr, within = 4, n_cuts = 10, envir = parent.frame()) 
 
 #n draws of the slope and cutpoint from profile_breakpt() output with $refits
 #from breakpt_refits(). Draws are split among the fixed-cut refits by weight;
-#within a refit, the slope is drawn from its estimate and SE.
+#within a refit, the slope is drawn from its estimate and SE (on the log scale
+#for breakpt(positive = TRUE), so slopes stay positive).
 #Returns a matrix with columns slope and cut (scaled covariate units).
 breakpt_draws <- function(pr, n = 100) {
   refits <- pr$refits
   if (!is.data.frame(refits)) stop("No breakpt_refits() results in `pr$refits`.")
   k <- sample(nrow(refits), n, replace = TRUE, prob = refits$weight)
-  cbind(slope = rnorm(n, refits$slope[k], refits$slope_se[k]), cut = refits$cut[k])
+  slope <- rnorm(n, refits$par[k], refits$par_se[k])
+  if (refits$log_scale[1]) slope <- exp(slope)
+  cbind(slope = slope, cut = refits$cut[k])
 }

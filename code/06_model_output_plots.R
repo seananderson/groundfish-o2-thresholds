@@ -1,5 +1,5 @@
 # remove.packages("sdmTMB")
-# Needs sdmTMB main with profile_breakpt():
+# Needs sdmTMB main with profile_breakpt() and breakpt(positive = TRUE):
 # remotes::install_github("pbs-assess/sdmTMB", dependencies = TRUE)
 library(sdmTMB)
 library(sp)
