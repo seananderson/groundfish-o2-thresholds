@@ -945,92 +945,32 @@ options(dplyr.summarise.inform = FALSE)
 #Remove goa from spiny dogfish
 bp_est2 <- filter(bp_est2, !(species=="spiny dogfish"&data=="goa _iphc"))
 
-#Function to calculate for each grid cell
-calc_grid <- function(mi1_s, mi2_s, mi3_s, pred_id, pars_list, models, model_fits, mi_models2use, weights,n) {
-  # Define locally within the worker
-  breakpoint_calc <- function(x, b_slope, b_thresh){
-    if (x < b_thresh) {
-      pred = x  * b_slope
-      #pred = (x-b_thresh) * b_slope
-    } else {
-      pred=b_thresh * b_slope
-      #pred = 0
-    }
-    return(pred)
-  }
-  
-  for(g in 1:length(model_fits)){
+#Function to calculate, for all grid cells at once, the ensemble-mean proportional
+#reduction in density caused by low oxygen (and its SD across the parameter draws).
+#For each draw, the reduction at metabolic index x is
+#  (exp(slope*cut) - exp(slope*min(x, cut))) / exp(slope*cut) = 1 - exp(-slope * max(cut - x, 0))
+#so everything is done as cells x draws matrices (no per-cell loop needed).
+calc_grid_vec <- function(mi1_s, mi2_s, mi3_s, pred_id, pars_list, models, mi_models2use, weights) {
+  mi_list <- list(model13 = mi1_s, model14 = mi2_s, model15 = mi3_s)
+  ens <- matrix(0, nrow = length(mi1_s), ncol = 100) #models without a pO2 term contribute 0
+  for(g in seq_along(models)){
     if(models[g] %in% mi_models2use){
-      #Calculate the breakpoint effect
-      if(models[g]=="model13"){
-        mi_s <- mi1_s
-      }
-      if(models[g]=="model14"){
-        mi_s <- mi2_s
-      }
-      if(models[g]=="model15"){
-        mi_s <- mi3_s
-      }
-      #Pull bp_pars and slope_pars from list
-      thresh_pars <- pars_list[[g]]$thresh_pars
+      x <- mi_list[[models[g]]]
       slope_pars <- pars_list[[g]]$slope_pars
-      
-      for(l in 1:length(thresh_pars)){
-        pred <- sapply(mi_s,breakpoint_calc, slope_pars[l],thresh_pars[l])
-        #repeat this value the length of nrow(dat)
-        max <- thresh_pars[l]+1
-        max_effect <- sapply(max,breakpoint_calc, slope_pars[l],thresh_pars[l])
-        est_effect_prop <- (exp(max_effect)-exp(pred))/exp(max_effect)
-        weight <- weights[g]
-        sim <- l
-        pred_id <- pred_id
-        
-        #Combine together
-        if(l==1){
-          est_effect_prop2 <- est_effect_prop
-          weight2 <- weight
-          sim2 <- sim
-          pred_id2 <- pred_id
-        }
-        
-        if(l>1){
-          est_effect_prop2 <- c(est_effect_prop2, est_effect_prop)
-          weight2 <- c(weight2, weight)
-          sim2 <- c(sim2, sim)
-          pred_id2 <- c(pred_id2, pred_id)
-        }
-      }
-      
-    } else {
-      #For models without pO2' term, conditional effect will be 0--add 100 iterations of this for each prediction point
-      est_effect_prop2 <- rep(0, 100)
-      weight2 <- rep(weights[g], 100)
-      pred_id2 <- rep(pred_id, 100)
-      sim2 <- rep(1:100, each=1)
+      thresh_pars <- pars_list[[g]]$thresh_pars
+      #cells x draws matrix of (cut - x), floored at 0
+      below <- pmax(outer(x, thresh_pars, function(a, b) b - a), 0)
+      eff <- 1 - exp(-sweep(below, 2, slope_pars, "*"))
+      ens <- ens + weights[g] * eff
     }
-    if(g==1){
-    df <- data.frame(est_effect_prop=est_effect_prop2, weight=weight2, sim=sim2, pred_id=pred_id2)
-    }
-    if(g>1){
-    df <- bind_rows(df, data.frame(est_effect_prop=est_effect_prop2, weight=weight2, sim=sim2, pred_id=pred_id2))
-    }
-  }     
-  
-  #Calculate weighted average
-  ens_preds <- df %>% 
-    group_by(pred_id, sim) %>% 
-    summarise(weighted_mean=weighted.mean(est_effect_prop,weight, na.rm=T))  %>% 
-    ungroup()
-  
-  #Ensemble w/ SD
-ens_preds2 <- ens_preds %>% 
-    group_by(pred_id) %>% 
-    summarise(ensemble_mean=mean(weighted_mean, na.rm=T), ensemble_sd=sd(weighted_mean, na.rm=T)) %>%
-    ungroup()
-  ens_preds2 <- ens_preds2 %>% 
-    mutate(ensemble_lower=(ensemble_mean-ensemble_sd), ensemble_upper=(ensemble_mean+ensemble_sd))%>% 
-    ungroup()
-  return(ens_preds2)
+  }
+  ensemble_mean <- rowMeans(ens)
+  ensemble_sd <- sqrt(rowSums((ens - ensemble_mean)^2) / (ncol(ens) - 1))
+  data.frame(pred_id = pred_id,
+             ensemble_mean = ensemble_mean,
+             ensemble_sd = ensemble_sd,
+             ensemble_lower = ensemble_mean - ensemble_sd,
+             ensemble_upper = ensemble_mean + ensemble_sd)
 }
 
 process_species <- function(species2do){
@@ -1135,30 +1075,19 @@ process_species <- function(species2do){
     }
   }
 
-  #Calculate for each grid cell, parallelized
-  #use mcmapply to parallelize
-  n <- nrow(preds)
-  results <- mcmapply(
-    FUN = function(z) {
-      calc_grid(
-        mi1_s = mi1_s[z],
-        mi2_s = mi2_s[z],
-        mi3_s = mi3_s[z],
-        pred_id=pred_id[z],
-        pars_list = pars_list,
-        models = models,
-        model_fits = model_fits,
-        mi_models2use = mi_models2use,
-        weights = weights,
-        n=n
-      )
-    },
-    z = 1:n,
-    mc.cores = 8,
-    SIMPLIFY = FALSE
+  #Calculate for all grid cells at once (vectorized)
+  results <- calc_grid_vec(
+    mi1_s = mi1_s,
+    mi2_s = mi2_s,
+    mi3_s = mi3_s,
+    pred_id = pred_id,
+    pars_list = pars_list,
+    models = models,
+    mi_models2use = mi_models2use,
+    weights = weights
   )
   #convert results to single dataframe
-  preds5 <- as.data.frame(bind_rows(results))
+  preds5 <- as.data.frame(results)
 
   #Add prediction dataframe back
   preds5 <- left_join(preds, preds5, by="pred_id")
