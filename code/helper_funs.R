@@ -2250,11 +2250,30 @@ breakpt_refits <- function(pr, within = 4, n_cuts = 10, envir = parent.frame()) 
 #within a refit, the slope is drawn from its estimate and SE (on the log scale
 #for breakpt(positive = TRUE), so slopes stay positive).
 #Returns a matrix with columns slope and cut (scaled covariate units).
+#If breakpt_refits() failed, repeats the point estimate (no uncertainty).
 breakpt_draws <- function(pr, n = 100) {
   refits <- pr$refits
-  if (!is.data.frame(refits)) stop("No breakpt_refits() results in `pr$refits`.")
+  if (!is.data.frame(refits)) {
+    warning("No breakpt_refits() results in `pr$refits`; using the point estimate.")
+    return(cbind(slope = rep(pr$estimate$slope, n), cut = rep(pr$estimate$cut, n)))
+  }
   k <- sample(nrow(refits), n, replace = TRUE, prob = refits$weight)
   slope <- rnorm(n, refits$par[k], refits$par_se[k])
   if (refits$log_scale[1]) slope <- exp(slope)
   cbind(slope = slope, cut = refits$cut[k])
+}
+
+
+#Save a fitted model with strip_sdmTMB() applied first (smaller .rds files).
+#The joint precision matrix is dropped too, so predict(nsim = ) won't work on
+#saved fits; 06 draws from the fixed-cut refits instead.
+#Handles sdmTMB fits and profile_breakpt() results (a list holding the fit in
+#`$fit`); try-errors and anything else are saved as is.
+save_model <- function(x, file) {
+  if (inherits(x, "sdmTMB")) {
+    x <- sdmTMB::strip_sdmTMB(x, strip_joint_precision = TRUE)
+  } else if (is.list(x) && inherits(x$fit, "sdmTMB")) {
+    x$fit <- sdmTMB::strip_sdmTMB(x$fit, strip_joint_precision = TRUE)
+  }
+  saveRDS(x, file = file)
 }

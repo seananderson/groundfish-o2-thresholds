@@ -42,21 +42,28 @@ for(i in 1:length(species)) {
     errors <- matrix(NA, 1, length(models)+5)
     this_dat <- dat_names[h]
     print(this_dat)
-    dat <- try(readRDS(file = paste0("output/",output_folder, "/", this_species, "_", this_dat, "_dat.rds")))
-    if(class(dat)=="try-error"){
+    dat_file <- paste0("output/",output_folder, "/", this_species, "_", this_dat, "_dat.rds")
+    dat <- if(file.exists(dat_file)) readRDS(file = dat_file) else NULL
+    if(is.null(dat)){
       errors[1,1:length(models)] <- paste("no data")
     }
-    if(class(dat)!="try-error"){
+    if(!is.null(dat)){
       for(j in 1:length(models)) {
         this_model <- models[j]
         print(this_model)
-        fit <- try(readRDS(file = paste0("output/", output_folder, "/", this_species,"_",this_dat, "_", this_model,".rds")))
-        if(class(fit)=="try-error"){
-          errors[1,j] <- paste0(fit)
+        fit_file <- paste0("output/", output_folder, "/", this_species,"_",this_dat, "_", this_model,".rds")
+        fit <- if(file.exists(fit_file)) readRDS(file = fit_file) else NULL
+        if(is.null(fit)){
+          errors[1,j] <- "no fit file"
         }
-        if(class(fit)!="try-error"){
+        if(!is.null(fit)){
           s <- try(sanity(get_fit(fit), silent=TRUE))
-          if(class(s)!="try-error"){
+          if(!is.list(s)){
+            #sanity() failed or returned something unexpected (e.g. a fit
+            #saved as a different object type)
+            message("sanity() gave a non-list for ", fit_file, " (class: ", paste(class(fit), collapse = "/"), ")")
+            errors[1,j] <- "sanity failed"
+          } else {
             if((s$hessian_ok + s$eigen_values_ok + s$nlminb_ok + s$gradients_ok)==4){
               temp[1,j] <- AIC(fit)
               if(this_model %in% mi_models){
@@ -107,7 +114,7 @@ counts <- aic_table %>%
 aic_table <- aic_table %>%
   mutate(across(1:length(models), as.numeric))
 aic_table <- aic_table %>%
-  mutate(across(1:length(models), round, 8))
+  mutate(across(1:length(models), ~ round(.x, 8)))
 
 
 #Replace NA with --

@@ -65,7 +65,7 @@ dat <- filter(dat, year>=2003)
 
 ##Clean up survey names
 dat <- dat %>%
-  mutate(across('survey', str_replace, 'EBS', 'afsc_bsai'),across('survey', str_replace, 'GOA', 'afsc_goa') )
+  mutate(across('survey', ~ str_replace(.x, 'EBS', 'afsc_bsai')), across('survey', ~ str_replace(.x, 'GOA', 'afsc_goa')) )
 
 #Clean up Inf
 dat$catch_weight_combined <- replace(dat$catch_weight_combined, dat$catch_weight_combined == "Inf", NA)
@@ -265,7 +265,7 @@ fit_species <- function(h, dat){
         # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
       ))
       print( Sys.time() - start )
-      saveRDS(m1, file = paste0("output/",output_folder, "/", this_species, "_", dat_names[i], "_model1.rds"))
+      save_model(m1, file = paste0("output/",output_folder, "/", this_species, "_", dat_names[i], "_model1.rds"))
       
       # Model 2: quadratic temp (uniform across regions)
       print("fitting m2")
@@ -296,7 +296,7 @@ fit_species <- function(h, dat){
         # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
       ))
       print( Sys.time() - start )
-      saveRDS(m2, file = paste0("output/",output_folder, "/", this_species,  "_", dat_names[i],"_model2.rds"))
+      save_model(m2, file = paste0("output/",output_folder, "/", this_species,  "_", dat_names[i],"_model2.rds"))
       
       # Model 3: breakpoint MI low
       print("fitting m3")
@@ -327,7 +327,7 @@ fit_species <- function(h, dat){
         #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
       ))
       print( Sys.time() - start )
-      saveRDS(m3, file = paste0("output/",output_folder, "/", this_species, "_", dat_names[i], "_model3.rds"))
+      save_model(m3, file = paste0("output/",output_folder, "/", this_species, "_", dat_names[i], "_model3.rds"))
       
       # Model 4: Breakpoint(mi median)
       print("fitting m4")
@@ -358,7 +358,7 @@ fit_species <- function(h, dat){
         # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
       ))
       print( Sys.time() - start )
-      saveRDS(m4, file = paste0("output/",output_folder, "/",this_species, "_", dat_names[i], "_model4.rds"))
+      save_model(m4, file = paste0("output/",output_folder, "/",this_species, "_", dat_names[i], "_model4.rds"))
       
       # Model 5: breakpoint(mi high)
       print("fitting m5")
@@ -389,7 +389,7 @@ fit_species <- function(h, dat){
         #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
       ))
       print( Sys.time() - start )
-      saveRDS(m5, file = paste0("output/",output_folder, "/", this_species, "_", dat_names[i], "_model5.rds"))
+      save_model(m5, file = paste0("output/",output_folder, "/", this_species, "_", dat_names[i], "_model5.rds"))
       
       # Model 6: breakpoint(mi high)
       print("fitting m6")
@@ -420,7 +420,7 @@ fit_species <- function(h, dat){
         #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
       ))
       print( Sys.time() - start )
-      saveRDS(m6, file = paste0("output/",output_folder, "/", this_species, "_", dat_names[i], "_model6.rds"))
+      save_model(m6, file = paste0("output/",output_folder, "/", this_species, "_", dat_names[i], "_model6.rds"))
     }
     
     if(cub_depth_m7_16){
@@ -454,7 +454,7 @@ fit_species <- function(h, dat){
       # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
     print( Sys.time() - start )
-    saveRDS(m7, file = paste0("output/", output_folder, "/", this_species, "_", dat_names[i], "_model7.rds"))
+    save_model(m7, file = paste0("output/", output_folder, "/", this_species, "_", dat_names[i], "_model7.rds"))
     
     # Model 8: quadratic temp (uniform across regions)
     print("fitting m8")
@@ -485,7 +485,7 @@ fit_species <- function(h, dat){
       # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
     print( Sys.time() - start )
-    saveRDS(m8, file = paste0("output/", output_folder, "/", this_species,  "_", dat_names[i],"_model8.rds"))
+    save_model(m8, file = paste0("output/", output_folder, "/", this_species,  "_", dat_names[i],"_model8.rds"))
     
     if(fit_unused){ # models 9-12
     # Model 9: breakpoint MI low
@@ -517,7 +517,7 @@ fit_species <- function(h, dat){
       #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
     print( Sys.time() - start )
-    saveRDS(m9, file = paste0("output/", output_folder, "/", this_species, "_", dat_names[i], "_model9.rds"))
+    save_model(m9, file = paste0("output/", output_folder, "/", this_species, "_", dat_names[i], "_model9.rds"))
     
     # Model 10: Breakpoint(mi median)
     print("fitting m10")
@@ -548,7 +548,7 @@ fit_species <- function(h, dat){
       # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
     print( Sys.time() - start )
-    saveRDS(m10, file = paste0("output/", output_folder, "/", this_species, "_", dat_names[i], "_model10.rds"))
+    save_model(m10, file = paste0("output/", output_folder, "/", this_species, "_", dat_names[i], "_model10.rds"))
     
     # Model 11: breakpoint(mi high)
     print("fitting m11")
@@ -579,7 +579,7 @@ fit_species <- function(h, dat){
       #extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
     print( Sys.time() - start )
-    saveRDS(m11, file = paste0("output/", output_folder, "/", this_species, "_", dat_names[i], "_model11.rds"))
+    save_model(m11, file = paste0("output/", output_folder, "/", this_species, "_", dat_names[i], "_model11.rds"))
     # Model 12: breakpoint(o2)
     print("fitting m12")
     start = Sys.time()
@@ -608,7 +608,7 @@ fit_species <- function(h, dat){
       # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
     print( Sys.time() - start )
-    saveRDS(m12, file = paste0("output/", output_folder, "/", this_species, "_", dat_names[i], "_model12.rds"))
+    save_model(m12, file = paste0("output/", output_folder, "/", this_species, "_", dat_names[i], "_model12.rds"))
     }
     # Model 13: breakpoint MI low+quad temp
     print("fitting m13")
@@ -641,7 +641,7 @@ fit_species <- function(h, dat){
     print( Sys.time() - start )
     #Refits at fixed cutpoints for breakpoint uncertainty (used in 06)
     if(!inherits(m13, "try-error")) m13$refits <- try(breakpt_refits(m13))
-    saveRDS(m13, file = paste0("output/",output_folder, "/", this_species, "_", dat_names[i], "_model13.rds"))
+    save_model(m13, file = paste0("output/",output_folder, "/", this_species, "_", dat_names[i], "_model13.rds"))
     
     # Model 14: Breakpoint(mi median)
     print("fitting m14")
@@ -650,7 +650,7 @@ fit_species <- function(h, dat){
       formula =   "catch ~ -1+year+survey+breakpt(mi2_s, positive = TRUE)+temp_scaled + temp_scaled2+ log_depth_scaled+ log_depth_scaled2+log_depth_scaled3"
       st_type="iid"
     } else {
-      formula =  "catch ~ -1 + year+region+survey+year +breakpt(mi2_s, positive = TRUE)+ log_depth_scaled+ log_depth_scaled2+log_depth_scaled3"
+      formula =  "catch ~ -1 + year+region+survey+year +breakpt(mi2_s, positive = TRUE)+temp_scaled + temp_scaled2+ log_depth_scaled+ log_depth_scaled2+log_depth_scaled3"
       if(!spatio_temp){
         st_type <- "off"
       } else{
@@ -673,7 +673,7 @@ fit_species <- function(h, dat){
     print( Sys.time() - start )
     #Refits at fixed cutpoints for breakpoint uncertainty (used in 06)
     if(!inherits(m14, "try-error")) m14$refits <- try(breakpt_refits(m14))
-    saveRDS(m14, file = paste0("output/", output_folder, "/", this_species, "_", dat_names[i], "_model14.rds"))
+    save_model(m14, file = paste0("output/", output_folder, "/", this_species, "_", dat_names[i], "_model14.rds"))
     
     # Model 15: breakpoint(mi high)
     print("fitting m15")
@@ -706,7 +706,7 @@ fit_species <- function(h, dat){
     print( Sys.time() - start )
     #Refits at fixed cutpoints for breakpoint uncertainty (used in 06)
     if(!inherits(m15, "try-error")) m15$refits <- try(breakpt_refits(m15))
-    saveRDS(m15, file = paste0("output/", output_folder, "/", this_species, "_", dat_names[i], "_model15.rds"))
+    save_model(m15, file = paste0("output/", output_folder, "/", this_species, "_", dat_names[i], "_model15.rds"))
     if(fit_unused){ # model 16
     # Model 16: breakpoint(o2)
     print("fitting m16")
@@ -737,7 +737,7 @@ fit_species <- function(h, dat){
       # extra_time = (min_year:max_year)[which(min_year:max_year %in% unique(sub$year) == FALSE)]
     ))
     print( Sys.time() - start )
-    saveRDS(m16, file = paste0("output/", output_folder, "/", this_species, "_", dat_names[i], "_model16.rds"))
+    save_model(m16, file = paste0("output/", output_folder, "/", this_species, "_", dat_names[i], "_model16.rds"))
     }
     gc()
   }
