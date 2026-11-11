@@ -50,6 +50,7 @@ species_iphc <- c("sablefish", "pacific cod", "pacific halibut", "yelloweye rock
 
 #Output folder
 output_folder <- "output"
+dir.create(paste0("output/", output_folder, "/plots"), recursive = TRUE, showWarnings = FALSE)
 
 #Metabolic index models to use
 mi_models2use <- c("model13", "model14", "model15")
