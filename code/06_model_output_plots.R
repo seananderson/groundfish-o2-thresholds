@@ -24,6 +24,8 @@ library(here)
 library(ggimage)
 library(stringr)
 library(Matrix)
+library(future)
+library(furrr)
 
 set.seed(9881)
 
@@ -51,6 +53,15 @@ species_iphc <- c("sablefish", "pacific cod", "pacific halibut", "yelloweye rock
 #Output folder
 output_folder <- "output"
 dir.create(paste0("output/", output_folder, "/plots"), recursive = TRUE, showWarnings = FALSE)
+
+#Run settings
+n_cores <- 3        #parallel workers for the per-species loops (future multisession)
+use_cache <- TRUE   #reuse intermediate results saved in output/ if they exist.
+                    #Set to FALSE (or delete the files) after refitting any models.
+plan(multisession, workers = n_cores)
+par_opts <- furrr_options(seed = NULL,
+                          packages = c("sdmTMB", "dplyr", "tidyr", "purrr", "stringr", "Matrix"))
+cache_path <- function(file) paste0("output/", output_folder, "/", file)
 
 #Metabolic index models to use
 mi_models2use <- c("model13", "model14", "model15")
@@ -121,9 +132,9 @@ dat_pred$invtemp <- (1 / boltz)  * ( 1 / (tref + 273.15) - 1 / (tref + 273.15))
 dat_pred$pred_id <- 1:100
 
 ####Conditional Effect: Manually w/ Monte Carlo parameter draws
-for(i in 1:length(species)){
-  this_species <- species[i]
+cond_effects_species <- function(this_species){
   print(this_species)
+  all_preds <- NULL
   preds2 <- dat_pred
   #Calculate metabolic index from correct taxa parameters
   #Pull correct 
@@ -283,15 +294,16 @@ for(i in 1:length(species)){
     }
   }
       
-  if(i==1){
-    all_preds2 <- all_preds}
-  if(i>1){
-    all_preds2 <- bind_rows(all_preds2, all_preds)
-  }
-  }
-  
-#Save all_preds2
-saveRDS(all_preds2, file = paste0("output/", output_folder, "/conditional_effects_data_all.rds"))
+  return(all_preds)
+}
+
+#Run for all species in parallel (or load saved result)
+if(use_cache && file.exists(cache_path("conditional_effects_data_all.rds"))){
+  all_preds2 <- readRDS(cache_path("conditional_effects_data_all.rds"))
+} else {
+  all_preds2 <- bind_rows(future_map(species, cond_effects_species, .options = par_opts))
+  saveRDS(all_preds2, file = cache_path("conditional_effects_data_all.rds"))
+}
 
 ##Plot all with SE
 #Set region
@@ -306,9 +318,9 @@ species_o2 <- unique(aic$species)
 
 ##Filtering protocol step 2: check reasonableness of breakpoint estimates
 #Pull 100 draws of parameter estimates (slope and breakpoint) and calculate ensemble
-for(i in 1:length(species_o2)){
-  this_species <- species_o2[i]
+bp_est_species <- function(this_species){
   print(this_species)
+  all_preds <- NULL
   #Calculate metabolic index from correct taxa parameters
   #Pull correct MI values
   mi_pars <- read.csv("data/taxa_table.csv")
@@ -442,11 +454,15 @@ for(i in 1:length(species_o2)){
     }
   }
 
-  if(i==1){
-    bp_est <- all_preds}
-  if(i>1){
-    bp_est<- bind_rows(bp_est, all_preds)
-  }
+  return(all_preds)
+}
+
+#Run for all species in parallel (or load saved, unfiltered result)
+if(use_cache && file.exists(cache_path("breakpoint_estimates_raw.rds"))){
+  bp_est <- readRDS(cache_path("breakpoint_estimates_raw.rds"))
+} else {
+  bp_est <- bind_rows(future_map(species_o2, bp_est_species, .options = par_opts))
+  saveRDS(bp_est, file = cache_path("breakpoint_estimates_raw.rds"))
 }
 
 ##Filter out species that don't have reasonable estimates
@@ -643,7 +659,7 @@ ggsave(
 
 ###Historical observations and conditional effects
 ###Loop through for each species for all data (limited to range)
-for(i in 1:nrow(bp_est2)){
+obs_row <- function(i){
   this_species <- bp_est2$species[i]
   this_data <- bp_est2$data[i]
   print(this_species)
@@ -788,15 +804,17 @@ for(i in 1:nrow(bp_est2)){
       if(grepl("iphc", this_dat)){
         preds5$data_type <- "bottom trawl & IPHC"
       }
-      if(i==1){
-        all_obs <- preds5}
-      if(i>1){
-        all_obs <- bind_rows(all_obs, preds5)
-      }
+      return(preds5)
 }
 
-##Save dataframe of conditional effect observations
-saveRDS(all_obs, file=paste0("output/", output_folder, "/", "conditional_effects_obs_points_all.rds"))
+#Run for all rows in parallel (or load saved result)
+if(use_cache && file.exists(cache_path("conditional_effects_obs_points_all.rds"))){
+  all_obs <- readRDS(cache_path("conditional_effects_obs_points_all.rds"))
+} else {
+  all_obs <- bind_rows(future_map(1:nrow(bp_est2), obs_row, .options = par_opts))
+  ##Save dataframe of conditional effect observations
+  saveRDS(all_obs, file = cache_path("conditional_effects_obs_points_all.rds"))
+}
 
 ##Fig 3: Plot just coastwide species, on one plot
 dat2plot <- filter(all_obs, grepl("coastwide", data))
@@ -1407,10 +1425,13 @@ ggsave(
 ###Add full density predictions and density predictions with O2 above threshold
 species_list <- filter(bp_est2, grepl("coastwide|cc", data))
 species_list <- unique(species_list$species)
-grids2 <- list()
 #Calculate predictions for each grid cell
-for(i in 1:length(species_list)){
-  this_species <- species_list[i]
+grids2_species <- function(this_species, grid_in){
+  #Use the saved result for this species if available
+  grid2_file <- cache_path(paste0(this_species, "_grid2.rds"))
+  if(use_cache && file.exists(grid2_file)){
+    return(readRDS(grid2_file))
+  }
   bp_est3 <- filter(bp_est2, species==this_species)
   this_data <- bp_est3$data
   if(length(this_data)>1){
@@ -1428,7 +1449,7 @@ for(i in 1:length(species_list)){
   Eo <- c(mi_pars2$Eolow, mi_pars2$Eo, mi_pars2$Eohigh)
   
   #New dataframe
-  preds <- grids[[str_to_sentence(this_species)]]
+  preds <- grid_in
   
   #Filter by depth and latitude
   #Depth buffer (200m than typical depth, and 0.5 degree latitude north and south)
@@ -1616,9 +1637,11 @@ for(i in 1:length(species_list)){
     preds5$data_type <- "bottom trawl & IPHC"
   }
   preds5$dat <- this_data
-  saveRDS(preds5, file = paste0("output/", output_folder, "/", this_species, "_", "grid2.rds"))
-  grids2[[i]] <- preds5
+  saveRDS(preds5, file = grid2_file)
+  return(preds5)
 }
+
+grids2 <- future_map2(species_list, grids[str_to_sentence(species_list)], grids2_species, .options = par_opts)
 
 #Add species names to list to label each dataset
 names(grids2) <- species_list
