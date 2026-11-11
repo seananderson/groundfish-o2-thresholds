@@ -506,7 +506,7 @@ write.xlsx(bp_aic, file = paste0("output/", output_folder, "/breakpoint_estimate
 #Plot, filtered out--supplemental figure
 ggplot(filter(all_preds2, id %in% bp_est$id), aes(x=po2, y=ensemble_mean_sc))+
   geom_line(aes(colour=region, linetype=data_type))+
-  geom_ribbon(aes(ymin=ensemble_mean_lower_sc, ymax=ensemble_mean_upper_sc, fill=region), alpha=0.2)+
+  geom_ribbon(aes(ymin=ensemble_mean_lower_sc, ymax=ensemble_mean_upper_sc, fill=region, group=interaction(region, data_type)), alpha=0.2)+
   facet_wrap("species", ncol=4, labeller=labeller(species=label_wrap_gen(15)))+
   theme(legend.title=element_blank(), 
         legend.box.spacing = unit(0, "pt"),
@@ -1178,7 +1178,7 @@ process_species <- function(species2do){
 }
 
 #Apply for all the species
-use_previous <- T
+use_previous <- F
 if(!use_previous){
 species_list <- filter(bp_est2, grepl("coastwide|cc", data))
 species_list <- unique(species_list$species)
