@@ -9,3 +9,4 @@ code/breakpoint_refit/
 # Large model output (see GIT_HISTORY_CLEANUP.md)
 /output/
 /output-old/
+GIT_HISTORY_CLEANUP.md
