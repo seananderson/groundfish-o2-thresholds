@@ -130,9 +130,9 @@ for(i in 1:length(species)){
   mi_pars <- read.csv("data/taxa_table.csv")
   mi_pars$Group <- tolower(mi_pars$Group)
   this_taxa <- taxa$MI_Taxa[taxa$common_name==this_species]
-  mi_pars <- filter(mi_pars,Group==this_taxa)
+  mi_pars2 <- filter(mi_pars,Group==this_taxa)
   
-  Eo <- c(mi_pars$Eolow, mi_pars$Eo, mi_pars$Eohigh)
+  Eo <- c(mi_pars2$Eolow, mi_pars2$Eo, mi_pars2$Eohigh)
   
   #Calculate metabolic index for species
   preds2$mi1 <- calc_mi(po2=preds2$po2, inv.temp=preds2$invtemp, Eo=Eo[1],fancy=F)
@@ -314,9 +314,9 @@ for(i in 1:length(species_o2)){
   mi_pars <- read.csv("data/taxa_table.csv")
   mi_pars$Group <- tolower(mi_pars$Group)
   this_taxa <- taxa$MI_Taxa[taxa$common_name==this_species]
-  mi_pars <- filter(mi_pars,Group==this_taxa)
+  mi_pars2 <- filter(mi_pars,Group==this_taxa)
   
-  Eo <- c(mi_pars$Eolow, mi_pars$Eo, mi_pars$Eohigh)
+  Eo <- c(mi_pars2$Eolow, mi_pars2$Eo, mi_pars2$Eohigh)
   
   #List of data types to pull
   this_aic <- filter(aic, species==this_species)
