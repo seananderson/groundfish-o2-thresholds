@@ -5,3 +5,7 @@
 .DS_Store
 code/breakpoint_refit/
 /breakpoint_*.md
+
+# Large model output (see GIT_HISTORY_CLEANUP.md)
+/output/
+/output-old/
