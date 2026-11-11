@@ -1660,8 +1660,12 @@ df_pic <- filter(taxa, species %in% unique(test$species))
 #Add x locations
 #Arrange alphabetically
 df_pic <- arrange(df_pic, species)
-df_pic$x <- c(415,320, 415, 425,475,325,1150, 550,325)
-df_pic$y <- c(0.8, 0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9)
+#Place each silhouette at 80% of that panel's depth range (panels have free x scales)
+max_depth <- test %>%
+  group_by(species) %>%
+  summarise(x = 0.8 * max(depth_m, na.rm=T))
+df_pic <- left_join(df_pic, max_depth, by="species")
+df_pic$y <- 0.9
 ##Line plot of predicted vs full biomass across depths
 ggplot(test, aes(x=depth_m, y=ensemble_mean.y2))+
   geom_line(aes(colour="Density w/ oxygen reduction"))+
