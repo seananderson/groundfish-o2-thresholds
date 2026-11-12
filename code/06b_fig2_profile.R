@@ -39,7 +39,7 @@ g <- ggplot(keep, aes(y = reorder(Species, cut, decreasing = TRUE), x = cut)) +
   theme_bw(base_size = 20) +
   theme(panel.grid = element_blank(), strip.background = element_blank(),
         axis.text = element_text(color = "black")) +
-  xlab("Temperature-Adjusted Oxygen Threshold (kPa)\nBest-AIC metric, profile-likelihood interval") +
+  xlab("Temperature-Adjusted Oxygen Threshold (kPa)") +
   ylab("")
 
 ggsave(paste0("output/", output_folder, "/plots/Fig2_profile.png"), plot = g,
