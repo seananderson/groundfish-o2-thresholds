@@ -56,6 +56,8 @@ dir.create(paste0("output/", output_folder, "/plots"), recursive = TRUE, showWar
 
 #Run settings
 n_cores <- 3        #parallel workers for the per-species loops (future multisession)
+n_draws_s3 <- 1000  #slope/cutpoint draws per model for the Fig S3 bands (the 2.5% and 97.5% edges
+                    #are noisy with 100). The maps keep 100 (their cost scales with grid cells x draws).
 use_cache <- TRUE   #reuse intermediate results saved in output/ when they are newer than
                     #the fits, data and AIC table they were built from (see cache_ok()).
                     #Set to FALSE after changing a calculation in this script.
@@ -229,10 +231,10 @@ cond_effects_species <- function(this_species){
           if(models[g] %in% mi_models2use){
             fit <- model_fits[[g]]
             #Draw slope and cutpoint across fixed-cut refits (see breakpt_refits())
-            bp_pars <- breakpt_draws(fit, n=100)
+            bp_pars <- breakpt_draws(fit, n=n_draws_s3)
             slope_pars <- bp_pars[,"slope"]
             thresh_pars <- bp_pars[,"cut"]
-            
+
             #Calculate the breakpoint effect
             if(models[g]=="model13"){
               mi_s <- preds$mi1_s
@@ -243,31 +245,18 @@ cond_effects_species <- function(this_species){
             if(models[g]=="model15"){
               mi_s <- preds$mi3_s
             }
-            for(l in 1:nrow(bp_pars)){
             #Relative to the plateau (slope*cutpoint), so each draw tops out at 1 and the band
-            #shows uncertainty in the cutpoint and slope, not in the arbitrary absolute level
-            pred <- as.data.frame(sapply(mi_s,breakpoint_calc, slope_pars[l],thresh_pars[l]) - slope_pars[l]*thresh_pars[l])
-            colnames(pred) <- "pred"
-            pred$weight <- weights[g]
-            pred$sim <- l
-            pred$pred_id <-1:100
-            #Combine together
-            if(l==1){
-              pred_model <- pred
-            }
-            if(l>1){
-              pred_model <- bind_rows(pred_model, pred)
-            }
-            }
-      
+            #shows uncertainty in the cutpoint and slope, not in the arbitrary absolute level:
+            #slope*min(x, cut) - slope*cut = -slope*max(cut - x, 0). Points x draws, all at once.
+            pred_mat <- -sweep(pmax(outer(mi_s, thresh_pars, function(a, b) b - a), 0), 2, slope_pars, "*")
+            pred_model <- data.frame(pred = as.vector(pred_mat), weight = weights[g],
+                                     sim = rep(seq_len(n_draws_s3), each = length(mi_s)),
+                                     pred_id = rep(1:100, n_draws_s3))
           } else {
-            #For models without pO2 term, conditional effect will be 0--add 100 iterations of this for each prediction point
             #No oxygen effect: flat at the plateau (1 relative to the plateau)
-            pred_model <- as.data.frame(matrix(0, nrow=length(preds$po2)*100))
-            colnames(pred_model) <- "pred"
-            pred_model$weight <- weights[g]
-            pred_model$pred_id <- rep(1:100, 100)
-            pred_model$sim <- rep(1:100, each=100)
+            pred_model <- data.frame(pred = 0, weight = weights[g],
+                                     sim = rep(seq_len(n_draws_s3), each = 100),
+                                     pred_id = rep(1:100, n_draws_s3))
           }
           if(g==1){
             pred_all <- pred_model

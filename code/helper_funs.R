@@ -2195,7 +2195,7 @@ get_fit <- function(x) {
 #weight, and the estimated slope parameter and its SE (cutpoint fixed). With
 #breakpt(positive = TRUE), that parameter is log(slope) (`log_scale` is TRUE).
 #`envir` is where the original call's variables (formula, priors, etc.) live.
-breakpt_refits <- function(pr, within = 4, n_cuts = 10, envir = parent.frame()) {
+breakpt_refits <- function(pr, within = 4, n_cuts = 40, envir = parent.frame()) {
   prof <- pr$profile[!is.na(pr$profile$nll), ]
   prof <- prof[order(prof$cut), ]
   inside <- which(prof$dnll < within)
