@@ -47,27 +47,9 @@ best_one <- function(i) {
   e <- pr$estimate
   v <- dat[[mi_var[[best]]]]
   unscale <- function(x) x * sd(v, na.rm = TRUE) + mean(v, na.rm = TRUE) # same scaling as 04a/06
-  # Interval: the contiguous stretch of the profile around the best cutpoint where the NLL is within
-  # qchisq(level, 1) / 2 of the minimum. The fit's own lwr/upr span every piece of the allowed set, so
-  # when the profile has a second dip (e.g., a steep step on a few low-oxygen tows) they cross a gap.
-  # Edges are linear interpolations between profile points, as in sdmTMB; a stretch that reaches the
-  # end of the profile is open (NA).
-  prof <- pr$profile[!is.na(pr$profile$nll), ]
-  prof <- prof[order(prof$cut), ]
-  within <- stats::qchisq(if (is.null(pr$level)) 0.95 else pr$level, 1) / 2
-  i0 <- which.min(abs(prof$cut - e$cut))
-  lo <- hi <- i0
-  while (lo > 1 && prof$dnll[lo - 1] < within) lo <- lo - 1
-  while (hi < nrow(prof) && prof$dnll[hi + 1] < within) hi <- hi + 1
-  cross <- function(i, j) prof$cut[i] + (within - prof$dnll[i]) * (prof$cut[j] - prof$cut[i]) / (prof$dnll[j] - prof$dnll[i])
-  lwr_s <- if (lo > 1) cross(lo, lo - 1) else NA_real_
-  upr_s <- if (hi < nrow(prof)) cross(hi, hi + 1) else NA_real_
   out$cut <- unscale(e$cut)
-  out$lwr <- unscale(lwr_s)
-  out$upr <- unscale(upr_s)
-  out$lwr_fit <- unscale(e$lwr) # the fit's own interval, spanning all pieces
-  out$upr_fit <- unscale(e$upr)
-  out$pieces <- e$pieces
+  out$lwr <- unscale(e$lwr)
+  out$upr <- unscale(e$upr)
   out$n <- e$n_below + e$n_above
   out$n_below <- e$n_below
   out$prop_below <- e$prop_below
@@ -78,7 +60,7 @@ best_one <- function(i) {
   n_above <- out$n - out$n_below
   out$reason <-
     if (min(unlist(row[ms])) > 0) "MI model not best by AIC"
-    else if (!is.finite(out$lwr) || !is.finite(out$upr)) "open profile interval"
+    else if (!is.finite(out$lwr) || !is.finite(out$upr) || isTRUE(e$open_interval)) "open profile interval"
     else if (out$n_below < min_tows && out$n_below / out$n < min_prop) "too few tows below cutpoint"
     else if (n_above < min_tows && n_above / out$n < min_prop) "too few tows above cutpoint"
     else if (out$prop_below > max_prop_below) "over 90% of tows below cutpoint"

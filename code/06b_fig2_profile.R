@@ -1,5 +1,5 @@
-# Alternative Fig 2: cutpoint and profile-likelihood interval of the best-AIC oxygen metric for each
-# dataset that passes the checks in select_datasets.R. No ensemble over metrics and no draws.
+# Alternative Fig 2: the profile likelihood of the cutpoint, as a violin per species, for the best-AIC oxygen
+# metric of each dataset that passes the checks in select_datasets.R. No ensemble over metrics and no draws.
 # Run after 05_aic_table.R. Works on its own or after 06.
 
 library(dplyr)
@@ -32,22 +32,8 @@ keep$img <- paste0("data/pictures/", gsub(" ", "_", keep$species), ".png")
 keep$Species <- str_to_sentence(keep$species)
 write.csv(keep, paste0("output/", output_folder, "/fig2_profile_plotted.csv"), row.names = FALSE)
 
-g <- ggplot(keep, aes(y = reorder(Species, cut, decreasing = TRUE), x = cut)) +
-  geom_image(aes(image = img), color = "blue", alpha = 0.3, size = 0.08) +
-  geom_linerange(aes(xmin = lwr, xmax = upr), linewidth = 0.4) +
-  geom_point(size = 1) +
-  theme_bw(base_size = 20) +
-  theme(panel.grid = element_blank(), strip.background = element_blank(),
-        axis.text = element_text(color = "black")) +
-  xlab("Temperature-Adjusted Oxygen Threshold (kPa)") +
-  ylab("")
-
-ggsave(paste0("output/", output_folder, "/plots/Fig2_profile.png"), plot = g,
-       width = 9.5, height = 8.5, units = "in", bg = "white", dpi = 600)
-
-# Violin version: each violin is the relative profile likelihood, exp(-delta NLL), across cutpoints
-# (peak = 1), from the best-AIC metric's profile. Not a probability density. Violins only, with no
-# point or interval; the figure with the best cutpoint and 95% interval is Fig2_profile.png.
+# Each violin is the relative profile likelihood, exp(-delta NLL), across cutpoints (peak = 1), from the
+# best-AIC metric's profile. Not a probability density. No point and no interval are drawn.
 prof_df <- bind_rows(lapply(seq_len(nrow(keep)), function(i) {
   k <- keep[i, ]
   f <- paste0("output/", output_folder, "/", k$species, "_", k$data)
@@ -67,7 +53,7 @@ keep$y <- match(keep$Species, lev)
 prof_df$y <- match(prof_df$Species, lev)
 prof_df$rel[!is.finite(prof_df$rel)] <- 0
 
-xlim_v <- c(min(prof_df$kpa[prof_df$rel > 0]) - 0.3, max(keep$upr) + 0.5)
+xlim_v <- c(min(prof_df$kpa[prof_df$rel > 0]) - 0.3, max(prof_df$kpa[prof_df$rel > 0]) + 0.3)
 # With clipping off (so the silhouettes can sit outside the panel), cut the violins at the axis limits ourselves
 prof_df <- prof_df[prof_df$kpa >= xlim_v[1] & prof_df$kpa <= xlim_v[2], ]
 # Silhouettes sit just outside the left edge of the panel, between the tick marks and the species names

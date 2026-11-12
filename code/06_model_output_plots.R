@@ -638,7 +638,7 @@ ggplot(bp_est_temp, aes(y=reorder(species, bp_ensemble_mean, decreasing=T), x=bp
 #   )
 
 ggsave(
-  paste0("output/", output_folder, "/plots/Fig2.png"),
+  paste0("output/", output_folder, "/plots/Fig2_new_selection.png"), #the original Fig2.png (old filters) is kept as is
   plot = last_plot(),
   device = NULL,
   path = NULL,
@@ -828,7 +828,9 @@ ggplot(us_coast_proj) + geom_sf() +
   theme_minimal(base_size=18)+
   xlab("Longitude")+
   ylab("Latitude")+
-  theme(legend.position=c(0.8,0.15), legend.justification="center",
+  #Legend goes in the empty bottom-right cell of the panel grid (11 panels in 4 columns)
+  theme(legend.position=c(0.885,0.235), legend.justification="center",
+        legend.title=element_text(size=16),
         legend.box.spacing = unit(0, "pt"), panel.spacing = unit(1.2, "lines"))+
   scale_colour_viridis(name="Reduction in \n local density ", limits=c(0,0.8), 
                        breaks=c(0,0.25, 0.5,0.75,1), 
