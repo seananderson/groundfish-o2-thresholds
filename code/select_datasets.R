@@ -69,7 +69,11 @@ best_one <- function(i) {
   out
 }
 
-selection <- bind_rows(lapply(seq_len(nrow(aic_sel)), best_one))
+n_cores <- 6L
+future::plan(future::multisession, workers = n_cores)
+selection <- bind_rows(furrr::future_map(seq_len(nrow(aic_sel)), best_one,
+  .options = furrr::furrr_options(seed = NULL)))
+future::plan(future::sequential)
 selection$region <- gsub(" _iphc", "", selection$data)
 selection$iphc <- grepl("iphc", selection$data)
 write.csv(selection, paste0("output/", output_folder, "/fig2_profile_all_datasets.csv"), row.names = FALSE)

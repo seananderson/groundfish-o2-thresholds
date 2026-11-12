@@ -829,7 +829,7 @@ ggplot(us_coast_proj) + geom_sf() +
   xlab("Longitude")+
   ylab("Latitude")+
   #Legend goes in the empty bottom-right cell of the panel grid (11 panels in 4 columns)
-  theme(legend.position=c(0.885,0.235), legend.justification="center",
+  theme(legend.position=c(0.885,0.175), legend.justification="center",
         legend.title=element_text(size=16),
         legend.box.spacing = unit(0, "pt"), panel.spacing = unit(1.2, "lines"))+
   scale_colour_viridis(name="Reduction in \n local density ", limits=c(0,0.8), 
