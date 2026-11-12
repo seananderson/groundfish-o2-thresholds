@@ -266,10 +266,9 @@ cond_effects_species <- function(this_species){
       #Ensemble w/ SD
       ens_preds2 <- ens_preds %>% 
         group_by(pred_id) %>% 
-        summarise(ensemble_mean=mean(weighted_mean, na.rm=T), ensemble_sd=sd(weighted_mean, na.rm=T)) %>%
-        ungroup()
-      ens_preds2 <- ens_preds2 %>% 
-        mutate(ensemble_lower=(ensemble_mean-ensemble_sd), ensemble_upper=(ensemble_mean+ensemble_sd))%>% 
+        summarise(ensemble_mean=mean(weighted_mean, na.rm=T), ensemble_sd=sd(weighted_mean, na.rm=T),
+                  ensemble_lower=quantile(weighted_mean, 0.025, na.rm=T, names=FALSE),
+                  ensemble_upper=quantile(weighted_mean, 0.975, na.rm=T, names=FALSE)) %>%
         ungroup()
       
       #Scaled
