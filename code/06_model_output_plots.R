@@ -225,7 +225,9 @@ cond_effects_species <- function(this_species){
               mi_s <- preds$mi3_s
             }
             for(l in 1:nrow(bp_pars)){
-            pred <- as.data.frame(sapply(mi_s,breakpoint_calc, slope_pars[l],thresh_pars[l]))
+            #Relative to the plateau (slope*cutpoint), so each draw tops out at 1 and the band
+            #shows uncertainty in the cutpoint and slope, not in the arbitrary absolute level
+            pred <- as.data.frame(sapply(mi_s,breakpoint_calc, slope_pars[l],thresh_pars[l]) - slope_pars[l]*thresh_pars[l])
             colnames(pred) <- "pred"
             pred$weight <- weights[g]
             pred$sim <- l
@@ -241,7 +243,8 @@ cond_effects_species <- function(this_species){
       
           } else {
             #For models without pO2 term, conditional effect will be 0--add 100 iterations of this for each prediction point
-            pred_model <- as.data.frame(matrix(-1000000, nrow=length(preds$po2)*100))
+            #No oxygen effect: flat at the plateau (1 relative to the plateau)
+            pred_model <- as.data.frame(matrix(0, nrow=length(preds$po2)*100))
             colnames(pred_model) <- "pred"
             pred_model$weight <- weights[g]
             pred_model$pred_id <- rep(1:100, 100)
@@ -271,9 +274,9 @@ cond_effects_species <- function(this_species){
       
       #Scaled
       ens_preds3 <- ens_preds2 %>%
-        mutate(ensemble_mean_sc= (ensemble_mean/max(ensemble_upper, na.rm=T)),
-               ensemble_mean_lower_sc = (ensemble_lower)/max(ensemble_upper, na.rm=T),
-               ensemble_mean_upper_sc = (ensemble_upper)/max(ensemble_upper, na.rm=T))
+        mutate(ensemble_mean_sc= ensemble_mean,
+               ensemble_mean_lower_sc = pmax(ensemble_lower, 0),
+               ensemble_mean_upper_sc = pmin(ensemble_upper, 1))
       #Add prediction dataframe back
       preds5 <- left_join(preds, ens_preds3, by="pred_id")
       preds5$species <- this_species
@@ -465,21 +468,12 @@ if(use_cache && file.exists(cache_path("breakpoint_estimates_raw.rds"))){
   saveRDS(bp_est, file = cache_path("breakpoint_estimates_raw.rds"))
 }
 
-##Filter out species that don't have reasonable estimates
+##Keep datasets that pass the direct checks on the best-AIC metric's profile fit (select_datasets.R)
 bp_est <- unique(bp_est)
-bp_est <- filter(bp_est, (bp_ensemble_mean<max_mi1 & ensemble_lower>0 & bp_ensemble_sd<10 & slope_lower>0))
-
-#Create ID for plotting
+source("code/select_datasets.R")
 bp_est$id <- paste(bp_est$species, bp_est$data, sep="_")
 all_preds2$id <- paste(all_preds2$species, all_preds2$data, sep="_")
-
-#conditional effects not negative or NA standard errors
-all_preds3 <- all_preds2 %>% filter(id %in% bp_est$id)
-ids2use <- all_preds3 %>% 
-  group_by(id) %>%
-  summarize(min=min(ensemble_lower))  %>%
-  filter(!is.na(min)&min>0)
-bp_est <- filter(bp_est, id %in% ids2use$id)
+bp_est <- filter(bp_est, id %in% paste(selection$species, selection$data, sep="_")[selection$reason=="pass"])
 
 #Save parameter estimates
 saveRDS(bp_est, file = paste0("output/", output_folder, "/breakpoint_estimates.rds"))
@@ -533,7 +527,7 @@ ggplot(filter(all_preds2, id %in% bp_est$id), aes(x=po2, y=ensemble_mean_sc))+
   scale_linetype_manual(values=c("dashed", "solid"))+
   guides(fill = guide_legend(nrow = 2, labels=labs), color=guide_legend(nrow=2, labels=labs, override.aes=list(size=4)), linetype=guide_legend(nrow=2))+
   xlab("Oxygen (kPa) at 12 C")+
-  ylab("Effect on Fish Density")+
+  ylab("Density relative to plateau")+
   geom_image(data=filter(taxa, species %in% species2plot),
     aes(image = img,x=25,y=0.2),
     size = 0.5,
@@ -567,7 +561,8 @@ for(i in 1:length(unique(bp_est$species))){
   this_species <- unique(bp_est$species)[i]
   if(any(grepl("coastwide", this_dat$data))){
     this_dat <- filter(this_dat, grepl("coastwide", data))
-    if(this_species %in% species_iphc){
+    #For IPHC species use the coastwide IPHC dataset if it passed; otherwise keep the coastwide trawl dataset
+    if(this_species %in% species_iphc & any(grepl("iphc", this_dat$data))){
       this_dat <- filter(this_dat, grepl("iphc", data))
     } 
   }
@@ -922,6 +917,8 @@ bc_grid$invtemp <- (1 / boltz)  * ( 1 / (bc_grid$temperature_C + 273.15) - 1 / (
 cc_grid <- filter(cc_grid, survey=="NWFSC.Combo")
 #combine grid
 grid <- bind_rows(bc_grid, cc_grid)
+#Modelled pO2 is slightly negative in places; cut off at 0
+grid$po2 <- pmax(grid$po2, 0)
 
 #Set mapping extent
 ylims <- c(min(grid$Y)*1000, max(grid$Y)*1000)
@@ -1029,6 +1026,8 @@ process_species <- function(species2do){
   
   #Pull the data file for scaling
   this_datframe <- try(readRDS(file = paste0("output/", output_folder, "/", this_species, "_", this_data, "_dat.rds")))
+  #Only predict to regions that were in the fitting data (e.g., walleye pollock has no CC data)
+  preds <- filter(preds, region %in% unique(as.character(this_datframe$region)))
   #Mean and sd for unscaling MIs
   mean_mi1 <- mean(this_datframe$mi1, na.rm=T)
   sd_mi1 <- sd(this_datframe$mi1, na.rm=T)
@@ -1127,7 +1126,7 @@ process_species <- function(species2do){
 #Apply for all the species
 use_previous <- F
 if(!use_previous){
-species_list <- filter(bp_est2, grepl("coastwide|cc", data))
+species_list <- filter(bp_est2, grepl("coastwide|cc|bc", data))
 species_list <- unique(species_list$species)
 #apply to all species (if need to run)
 grids <- list()
@@ -1140,7 +1139,7 @@ grids[[i]] <- grids_x
 #Or load in
 if(use_previous){
 grids <- list()
-species_list <- filter(bp_est2, grepl("coastwide|cc", data))
+species_list <- filter(bp_est2, grepl("coastwide|cc|bc", data))
 species_list <- unique(species_list$species)
 for(i in 1:length(species_list)){
   this_species <- tolower(species_list[i])
@@ -1170,6 +1169,9 @@ if(length(this_dat)>1){
 
 if(grepl("cc", this_dat)){
   grids2use <- filter(grids2use, region=="cc")
+}
+if(this_dat=="bc"){
+  grids2use <- filter(grids2use, region=="bc")
 }
 
 #Remove CC points in Bering Skate, because basically not there
@@ -1249,6 +1251,8 @@ dat2plot_wa <- filter(dat2plot_wa, grepl("cc", data_type)|grepl("coastwide", dat
 #Remove Bering skate, because so little of its range is in the California Current
 dat2plot_wa <- filter(dat2plot_wa, !(species=="Bering skate"))
 df_pic <- filter(df_pic, !(species=="Bering skate"))
+#Only species that have points (not BC-only datasets)
+df_pic <- filter(df_pic, species %in% unique(dat2plot_wa$species))
 
 ggplot(us_coast_proj) + geom_sf() +
   geom_point(dat2plot_wa,mapping=aes(x=X*1000, y=Y*1000, colour=ensemble_mean), size=0.5)+
@@ -1423,7 +1427,7 @@ ggsave(
 )
 
 ###Add full density predictions and density predictions with O2 above threshold
-species_list <- filter(bp_est2, grepl("coastwide|cc", data))
+species_list <- filter(bp_est2, grepl("coastwide|cc|bc", data))
 species_list <- unique(species_list$species)
 #Calculate predictions for each grid cell
 grids2_species <- function(this_species, grid_in){
@@ -1481,6 +1485,8 @@ grids2_species <- function(this_species, grid_in){
   
   #Pull the data file for scaling
   this_datframe <- try(readRDS(file = paste0("output/", output_folder, "/", this_species, "_", this_data, "_dat.rds")))
+  #Only predict to regions that were in the fitting data (e.g., walleye pollock has no CC data)
+  preds <- filter(preds, region %in% unique(as.character(this_datframe$region)))
   #Mean and sd for unscaling MIs
   mean_mi1 <- mean(this_datframe$mi1, na.rm=T)
   sd_mi1 <- sd(this_datframe$mi1, na.rm=T)
