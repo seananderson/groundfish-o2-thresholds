@@ -69,13 +69,25 @@ best_one <- function(i) {
   out
 }
 
-n_cores <- 6L
-future::plan(future::multisession, workers = n_cores)
+# Run in parallel, then put back whatever future plan the calling script (e.g. 06) had set
+old_plan <- future::plan(future::multisession, workers = 6L)
 selection <- bind_rows(furrr::future_map(seq_len(nrow(aic_sel)), best_one,
   .options = furrr::furrr_options(seed = NULL)))
-future::plan(future::sequential)
+future::plan(old_plan)
 selection$region <- gsub(" _iphc", "", selection$data)
 selection$iphc <- grepl("iphc", selection$data)
 write.csv(selection, paste0("output/", output_folder, "/fig2_profile_all_datasets.csv"), row.names = FALSE)
 print(table(selection$reason))
+
+# Choose one dataset per species from `data` (the dataset names that passed for `species`).
+# Regions are tried in the order given. Within a region, IPHC species take the IPHC dataset
+# first and other species the trawl-only dataset first. Returns NA if none of `data` matches.
+# Fig 2 (06 and 06b) uses the default order: coastwide, then BC (as in the original 06), then
+# the other regions, so a species with several regional datasets but no BC one isn't dropped.
+pick_dataset <- function(data, species, regions = c("coastwide", "bc", "cc", "goa", "ebs")) {
+  type <- if (tolower(species) %in% species_iphc) c(" _iphc", "") else c("", " _iphc") # 06 sentence-cases names partway
+  pref <- as.vector(t(outer(regions, type, paste0)))
+  i <- match(data, pref)
+  if (all(is.na(i))) NA_character_ else data[which.min(i)]
+}
 

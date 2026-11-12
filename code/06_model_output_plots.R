@@ -56,12 +56,31 @@ dir.create(paste0("output/", output_folder, "/plots"), recursive = TRUE, showWar
 
 #Run settings
 n_cores <- 3        #parallel workers for the per-species loops (future multisession)
-use_cache <- TRUE   #reuse intermediate results saved in output/ if they exist.
-                    #Set to FALSE (or delete the files) after refitting any models.
+use_cache <- TRUE   #reuse intermediate results saved in output/ when they are newer than
+                    #the fits, data and AIC table they were built from (see cache_ok()).
+                    #Set to FALSE after changing a calculation in this script.
 plan(multisession, workers = n_cores)
 par_opts <- furrr_options(seed = NULL,
                           packages = c("sdmTMB", "dplyr", "tidyr", "purrr", "stringr", "Matrix"))
 cache_path <- function(file) paste0("output/", output_folder, "/", file)
+#Files a cached result depends on: the AIC table (which models enter the ensemble) and the
+#fits and data of one dataset, or of all datasets if `species` is NULL
+cache_deps <- function(species = NULL, data = NULL){
+  aic_file <- cache_path("aic_table.rds")
+  if(is.null(species)){
+    fits <- list.files(cache_path(""), pattern = "_(model(7|8|13|14|15)|dat)\\.rds$", full.names = TRUE)
+  } else {
+    fits <- cache_path(paste0(species, "_", data, "_", c("model7", "model8", "model13", "model14", "model15", "dat"), ".rds"))
+  }
+  c(aic_file, fits)
+}
+#Reuse a cached file only if caching is on, it exists, and it is newer than every file in `deps`.
+#Edits to this script's calculations aren't tracked (set use_cache <- FALSE after those).
+cache_ok <- function(file, deps){
+  if(!use_cache || !file.exists(file)) return(FALSE)
+  deps <- deps[file.exists(deps)]
+  !length(deps) || file.mtime(file) > max(file.mtime(deps))
+}
 
 #Metabolic index models to use
 mi_models2use <- c("model13", "model14", "model15")
@@ -300,7 +319,7 @@ cond_effects_species <- function(this_species){
 }
 
 #Run for all species in parallel (or load saved result)
-if(use_cache && file.exists(cache_path("conditional_effects_data_all.rds"))){
+if(cache_ok(cache_path("conditional_effects_data_all.rds"), cache_deps())){
   all_preds2 <- readRDS(cache_path("conditional_effects_data_all.rds"))
 } else {
   all_preds2 <- bind_rows(future_map(species, cond_effects_species, .options = par_opts))
@@ -460,7 +479,7 @@ bp_est_species <- function(this_species){
 }
 
 #Run for all species in parallel (or load saved, unfiltered result)
-if(use_cache && file.exists(cache_path("breakpoint_estimates_raw.rds"))){
+if(cache_ok(cache_path("breakpoint_estimates_raw.rds"), cache_deps())){
   bp_est <- readRDS(cache_path("breakpoint_estimates_raw.rds"))
 } else {
   bp_est <- bind_rows(future_map(species_o2, bp_est_species, .options = par_opts))
@@ -575,18 +594,17 @@ for(i in 1:length(unique(bp_est$species))){
 ##Save as RDS
 saveRDS(bp_est2, file = paste0("output/", output_folder, "/breakpoint_estimates_filtered.rds"))
 
-#Just one region per species
-for(i in 1:length(unique(bp_est2$species))){
-  this_dat <- filter(bp_est2, species==unique(bp_est2$species)[i])
-  this_species <- unique(bp_est2$species)[i]
-  if(nrow(this_dat)>1){
-    this_dat <- filter(this_dat, region=="bc")
-  }
-  if(i==1){
-    bp_est_temp <- this_dat
-  } else {
-    bp_est_temp <- bind_rows(bp_est_temp, this_dat)
-  }
+#Just one dataset per species for Fig 2: coastwide, then BC, then the other regions
+#(pick_dataset() in select_datasets.R, also used by 06b)
+bp_est_temp <- bind_rows(lapply(unique(bp_est2$species), function(s){
+  this_dat <- filter(bp_est2, species==s)
+  filter(this_dat, data==pick_dataset(this_dat$data, s))
+}))
+
+#One dataset per species for the BC and California Current maps (Figs 4, 5, S6, S8):
+#coastwide, then CC, then BC (IPHC first for IPHC species; see pick_dataset())
+map_dataset <- function(this_species){
+  pick_dataset(bp_est2$data[bp_est2$species==this_species], this_species, regions=c("coastwide", "cc", "bc"))
 }
 
 #Add file name for each fish for plotting
@@ -801,14 +819,19 @@ obs_row <- function(i){
       return(preds5)
 }
 
-#Run for all rows in parallel (or load saved result)
-if(use_cache && file.exists(cache_path("conditional_effects_obs_points_all.rds"))){
-  all_obs <- readRDS(cache_path("conditional_effects_obs_points_all.rds"))
-} else {
-  all_obs <- bind_rows(future_map(1:nrow(bp_est2), obs_row, .options = par_opts))
-  ##Save dataframe of conditional effect observations
-  saveRDS(all_obs, file = cache_path("conditional_effects_obs_points_all.rds"))
+#Cached per dataset, so a change in which datasets are selected never reuses another dataset's result
+obs_row_cached <- function(i){
+  f <- cache_path(paste0(bp_est2$species[i], "_", bp_est2$data[i], "_obs_points.rds"))
+  if(cache_ok(f, cache_deps(bp_est2$species[i], bp_est2$data[i]))) return(readRDS(f))
+  out <- obs_row(i)
+  saveRDS(out, file = f)
+  out
 }
+
+#Run for all rows in parallel
+all_obs <- bind_rows(future_map(1:nrow(bp_est2), obs_row_cached, .options = par_opts))
+##Save dataframe of conditional effect observations
+saveRDS(all_obs, file = cache_path("conditional_effects_obs_points_all.rds"))
 
 ##Fig 3: Plot just coastwide species, on one plot
 dat2plot <- filter(all_obs, grepl("coastwide", data))
@@ -991,9 +1014,8 @@ calc_grid_vec <- function(mi1_s, mi2_s, mi3_s, pred_id, pars_list, models, mi_mo
 
 process_species <- function(species2do){
   this_species <- species2do
-  bp_est3 <- filter(bp_est2, species==this_species)
-  this_data <- bp_est3$data
- 
+  this_data <- map_dataset(this_species)
+
   print(this_species)
   #Species table for depth & lat filtering
   species_tab <- filter(species_table, common_name==tolower(this_species))
@@ -1162,16 +1184,12 @@ print(unique(grids[[i]]$common_name))
 grids2use <- filter(grids2use, year==2021)
 #grids2use <- filter(grids2use,depth_m<(depth_limit+200))
 #grids2use <- filter(grids2use, (latitude>(min_lat-0.5))&(latitude<(max_lat+0.5)))
-this_dat <- bp_est2$data[bp_est2$species==species_list[i]]
-
-if(length(this_dat)>1){
-  this_dat <- "cc"
-}
+this_dat <- map_dataset(species_list[i])
 
 if(grepl("cc", this_dat)){
   grids2use <- filter(grids2use, region=="cc")
 }
-if(this_dat=="bc"){
+if(grepl("bc", this_dat)){
   grids2use <- filter(grids2use, region=="bc")
 }
 
@@ -1294,11 +1312,8 @@ test <- grids[[i]]
 #test <- filter(test, depth_m<(depth_limit+200))
 #test <- filter(test, (latitude>(min_lat-0.5))&(latitude<max_lat+0.5))
 #Filter out BC or CC if not that region
-this_dat <- bp_est2$data[bp_est2$species==species_list[i]]
+this_dat <- map_dataset(species_list[i])
 print(unique(grids[[i]]$common_name))
-if(length(this_dat)>1){
-  this_dat <- "cc"
-}
 if(grepl("bc", this_dat)){
   test <- filter(test, region=="bc")
 }
@@ -1432,17 +1447,13 @@ species_list <- filter(bp_est2, grepl("coastwide|cc|bc", data))
 species_list <- unique(species_list$species)
 #Calculate predictions for each grid cell
 grids2_species <- function(this_species, grid_in){
-  #Use the saved result for this species if available
-  grid2_file <- cache_path(paste0(this_species, "_grid2.rds"))
-  if(use_cache && file.exists(grid2_file)){
+  this_data <- map_dataset(this_species)
+  #Use the saved result for this species and dataset if it is newer than the fits it came from
+  grid2_file <- cache_path(paste0(this_species, "_", this_data, "_grid2.rds"))
+  if(cache_ok(grid2_file, cache_deps(this_species, this_data))){
     return(readRDS(grid2_file))
   }
-  bp_est3 <- filter(bp_est2, species==this_species)
-  this_data <- bp_est3$data
-  if(length(this_data)>1){
-    this_data <- "cc"
-  }
-  
+
   print(this_species)
   #Calculate metabolic index from correct taxa parameters
   #Pull correct 

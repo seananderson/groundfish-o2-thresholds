@@ -17,16 +17,11 @@ source("code/select_datasets.R") # defines `selection`, one row per dataset
 
 keep <- filter(selection, reason == "pass")
 
-# One dataset per species, as in 06: coastwide if available, and the IPHC version for IPHC species.
-# If a species' coastwide IPHC dataset did not pass, use its coastwide trawl dataset.
+# One dataset per species, as in 06 (pick_dataset() in select_datasets.R): coastwide if it passed
+# (IPHC version first for IPHC species), then BC, then the other regions
 keep <- bind_rows(lapply(unique(keep$species), function(s) {
   d <- filter(keep, species == s)
-  if (any(d$region == "coastwide")) {
-    d <- filter(d, region == "coastwide")
-    if (s %in% species_iphc && any(d$iphc)) d <- filter(d, iphc)
-  }
-  if (nrow(d) > 1) d <- filter(d, region == "bc") # then the BC dataset, as in 06
-  d
+  filter(d, data == pick_dataset(d$data, s))
 }))
 keep$img <- paste0("data/pictures/", gsub(" ", "_", keep$species), ".png")
 keep$Species <- str_to_sentence(keep$species)
